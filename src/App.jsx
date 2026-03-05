@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.co";
+const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.com";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd3d6Z2tsemVybGVmdGt2bmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMTU1MDksImV4cCI6MjA4NzY5MTUwOX0.1WnJd5-JJk4keOUk_VEV-WXiGgyNU1MHEZjxkaLkb54";
 
 const sbHeaders = () => ({
@@ -547,9 +547,12 @@ export default function App(){
   const [dataReady,setDataReady]=useState(false);
   const isAdmin=currentUser?.role==="admin";
 
-  const [entryModal,setEntryModal]=useState(null);
+  const [entryModal,setEntryModal]=useState(null); // nur für Bearbeiten
   const [formMsg,setFormMsg]=useState(null);
   const [selectedDate,setSelectedDate]=useState(todayStr());
+  const emptyForm=()=>({date:todayStr(),project:"",activity:"",hours:"",minutes:"",note:""});
+  const [inlineForm,setInlineForm]=useState(emptyForm());
+  const [inlineSaving,setInlineSaving]=useState(false);
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState("");
   const [userModal,setUserModal]=useState(null);
   const [projektAuswahlOpen,setProjektAuswahlOpen]=useState(false);
@@ -570,10 +573,19 @@ export default function App(){
   const login=(u)=>{setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}setView("eintragen");};
   const logout=()=>{setCurrentUser(null);setDataReady(false);try{sessionStorage.removeItem("ze_session");}catch{}};
 
-  const saveEntry=async({date,project,activity,totalMin,note})=>{
-    if(entryModal&&entryModal!=="new"){const updated=await sb.update("entries",entryModal.id,{date,project,activity,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===entryModal.id?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});}
+  const saveEntry=async({date,project,activity,totalMin,note},isEdit=false)=>{
+    if(isEdit&&entryModal){const updated=await sb.update("entries",entryModal.id,{date,project,activity,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===entryModal.id?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);}
     else{const created=await sb.insert("entries",{date,employee_id:currentUser.id,employee_name:currentUser.name,project,activity,total_min:totalMin,note:note||null});setEntries(prev=>[created[0],...prev]);setFormMsg({type:"success",text:"✓ Eintrag gespeichert!"});}
-    setEntryModal(null);setTimeout(()=>setFormMsg(null),2500);
+    setTimeout(()=>setFormMsg(null),2500);
+  };
+  const submitInlineForm=async()=>{
+    if(!inlineForm.project||!inlineForm.activity||(!inlineForm.hours&&!inlineForm.minutes)){setFormMsg({type:"error",text:"Bitte Projekt, Tätigkeit und Zeit ausfüllen."});return;}
+    const totalMin=(parseInt(inlineForm.hours||0)*60)+parseInt(inlineForm.minutes||0);
+    if(totalMin<=0){setFormMsg({type:"error",text:"Zeit muss grösser als 0 sein."});return;}
+    setInlineSaving(true);
+    try{await saveEntry({...inlineForm,totalMin});setInlineForm(f=>({...emptyForm(),date:f.date}));}
+    catch(e){setFormMsg({type:"error",text:"Fehler: "+e.message});}
+    finally{setInlineSaving(false);}
   };
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
   const addProject=async()=>{if(!newProject.trim())return;try{await sb.insert("projects",{name:newProject.trim()});setProjects(prev=>[...prev,newProject.trim()].sort());setNewProject("");}catch(e){alert("Fehler: "+e.message);}};
@@ -584,7 +596,7 @@ export default function App(){
   const deleteUser=async(id)=>{if(id===currentUser.id||!window.confirm("Benutzer löschen?"))return;try{await sb.remove("users",id);setUsers(prev=>prev.filter(u=>u.id!==id));}catch(e){alert("Fehler: "+e.message);}};
 
   const myEntries=useMemo(()=>entries.filter(e=>e.employee_id===currentUser?.id),[entries,currentUser]);
-  const dayTotal=useMemo(()=>myEntries.filter(e=>e.date===selectedDate).reduce((s,e)=>s+e.total_min,0),[myEntries,selectedDate]);
+  const dayTotal=useMemo(()=>myEntries.filter(e=>e.date===inlineForm.date).reduce((s,e)=>s+e.total_min,0),[myEntries,inlineForm.date]);
 
   const filteredEntries=useMemo(()=>{
     const base=isAdmin?entries:myEntries;
@@ -615,7 +627,7 @@ export default function App(){
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
       {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)}/>}
-      {entryModal&&<EntryModal existing={entryModal==="new"?null:entryModal} projects={projects} activities={activities} onSave={saveEntry} onClose={()=>setEntryModal(null)}/>}
+      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)}/>}
       {projektAuswahlOpen&&(
         <ProjektAuswahlModal
           allProjects={projectsInRange}
@@ -656,25 +668,69 @@ export default function App(){
         {/* EINTRAGEN */}
         {view==="eintragen"&&(
           <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,flexWrap:"wrap",gap:10}}>
-              <div><h1 style={{fontSize:21,fontWeight:700}}>Zeiteintrag erfassen</h1><p style={{color:"#5a6090",fontSize:13,marginTop:4}}>Erfassung als: <strong style={{color:"#7c8bff"}}>{currentUser.name}</strong></p></div>
+            <div style={{marginBottom:16}}>
+              <h1 style={{fontSize:21,fontWeight:700}}>Zeiteintrag erfassen</h1>
+              <p style={{color:"#5a6090",fontSize:13,marginTop:4}}>Erfassung als: <strong style={{color:"#7c8bff"}}>{currentUser.name}</strong></p>
             </div>
-            <div className="card" style={{marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
-              <div className="field-group" style={{flex:"1 1 160px",maxWidth:220}}>
-                <label className="label">Datum</label>
-                <input type="date" className="input" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)}/>
-              </div>
-              <div style={{flex:"1 1 200px"}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#5a6090",letterSpacing:".07em",textTransform:"uppercase",marginBottom:6}}>Tagestotal ({selectedDate})</div>
-                <div style={{display:"flex",alignItems:"baseline",gap:10}}>
-                  <span style={{fontFamily:"'DM Mono',monospace",fontSize:28,fontWeight:500,color:dayTotal>0?"#4dffaa":"#2a2e48"}}>{fmtTime(dayTotal)}</span>
-                  {dayTotal>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:"#5a6090"}}>{fmtDecimal(dayTotal)} h</span>}
+
+            {/* Inline-Erfassungsformular */}
+            <div className="card" style={{marginBottom:16}}>
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                {/* Zeile 1: Datum + Tagestotal */}
+                <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                  <div className="field-group" style={{flex:"1 1 160px",maxWidth:220}}>
+                    <label className="label">Datum</label>
+                    <input type="date" className="input" value={inlineForm.date} onChange={e=>setInlineForm(f=>({...f,date:e.target.value}))}/>
+                  </div>
+                  <div style={{flex:"1 1 180px"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#5a6090",letterSpacing:".07em",textTransform:"uppercase",marginBottom:4}}>Tagestotal</div>
+                    <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                      <span style={{fontFamily:"'DM Mono',monospace",fontSize:24,fontWeight:500,color:dayTotal>0?"#4dffaa":"#2a2e48"}}>{fmtTime(dayTotal)}</span>
+                      {dayTotal>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"#5a6090"}}>{fmtDecimal(dayTotal)} h</span>}
+                    </div>
+                  </div>
                 </div>
-                {dayTotal===0&&<div style={{fontSize:12,color:"#3a3e58",marginTop:2}}>Noch keine Einträge für diesen Tag</div>}
+                {/* Zeile 2: Projekt + Tätigkeit */}
+                <div className="grid-2">
+                  <div className="field-group">
+                    <label className="label">Projekt *</label>
+                    <select className="input" value={inlineForm.project} onChange={e=>setInlineForm(f=>({...f,project:e.target.value}))}>
+                      <option value="">— wählen —</option>{projects.map(p=><option key={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label className="label">Tätigkeit *</label>
+                    <select className="input" value={inlineForm.activity} onChange={e=>setInlineForm(f=>({...f,activity:e.target.value}))}>
+                      <option value="">— wählen —</option>{activities.map(a=><option key={a}>{a}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {/* Zeile 3: Zeit + Bemerkung */}
+                <div className="grid-2">
+                  <div style={{display:"flex",gap:10}}>
+                    <div className="field-group" style={{flex:1}}>
+                      <label className="label">Stunden *</label>
+                      <input type="number" min="0" max="24" className="input" placeholder="0" value={inlineForm.hours} onChange={e=>setInlineForm(f=>({...f,hours:e.target.value}))} inputMode="numeric"/>
+                    </div>
+                    <div className="field-group" style={{flex:1}}>
+                      <label className="label">Minuten</label>
+                      <input type="number" min="0" max="59" className="input" placeholder="0" value={inlineForm.minutes} onChange={e=>setInlineForm(f=>({...f,minutes:e.target.value}))} inputMode="numeric"/>
+                    </div>
+                  </div>
+                  <div className="field-group">
+                    <label className="label">Bemerkung</label>
+                    <input className="input" placeholder="Optionale Bemerkung…" value={inlineForm.note} onChange={e=>setInlineForm(f=>({...f,note:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitInlineForm()}/>
+                  </div>
+                </div>
+                {/* Zeile 4: Nachricht + Button */}
+                {formMsg&&<div className={formMsg.type==="error"?"msg-error":"msg-success"}>{formMsg.text}</div>}
+                <div style={{display:"flex",justifyContent:"flex-end"}}>
+                  <button className="btn btn-primary" style={{padding:"11px 28px"}} onClick={submitInlineForm} disabled={inlineSaving}>{inlineSaving?"Speichern…":"+ Eintrag speichern"}</button>
+                </div>
               </div>
-              <div><button className="btn btn-primary" style={{padding:"10px 18px",fontSize:14}} onClick={()=>setEntryModal("new")}>+ Neuer Eintrag</button></div>
             </div>
-            {formMsg&&<div className={formMsg.type==="error"?"msg-error":"msg-success"} style={{marginBottom:12}}>{formMsg.text}</div>}
+
+            {/* Letzte Einträge */}
             <h2 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#7880a8",letterSpacing:".05em",textTransform:"uppercase"}}>Meine letzten Einträge</h2>
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <div className="table-wrap"><table>
