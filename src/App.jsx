@@ -673,6 +673,7 @@ export default function App(){
   const [view,setView]=useState(()=>currentUser?.role==="admin"?"auswertung":"eintragen");
   const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]); const [products,setProducts]=useState([]);
   const [projectBudgets,setProjectBudgets]=useState({}); // {name: budget_hours|null}
+  const [archivedProjects,setArchivedProjects]=useState([]); // nur archivierte Namen
   const [dataReady,setDataReady]=useState(false);
   const isAdmin=currentUser?.role==="admin";
 
@@ -818,7 +819,7 @@ export default function App(){
 
   const loadData=useCallback(async()=>{
     if(!isConfigured||!currentUser)return;
-    try{const [u,e,p,a,pr]=await Promise.all([sb.select("users","?select=id,name,username,role,password&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name")]);setUsers(u);setEntries(e);setProjects(p.map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));
+    try{const [u,e,p,a,pr]=await Promise.all([sb.select("users","?select=id,name,username,role,password&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name")]);setUsers(u);setEntries(e);setProjects(p.filter(r=>!r.is_archived).map(r=>r.name));setArchivedProjects(p.filter(r=>r.is_archived).map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));
       const budgets=Object.fromEntries(p.map(r=>[r.name,r.budget_hours??null]));setProjectBudgets(budgets);setBudgetDraft(Object.fromEntries(p.map(r=>[r.name,r.budget_hours!=null?String(r.budget_hours):""])));}
     catch(err){console.error("Ladefehler:",err);}finally{setDataReady(true);}
   },[currentUser,isConfigured]);
@@ -852,6 +853,12 @@ export default function App(){
     const u=updated[0];setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}
   };
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+  const archiveProject=async(name)=>{
+    try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.update("projects",r[0].id,{is_archived:true});setProjects(prev=>prev.filter(p=>p!==name));setArchivedProjects(prev=>[...prev,name].sort());}catch(e){alert("Fehler: "+e.message);}
+  };
+  const restoreProject=async(name)=>{
+    try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.update("projects",r[0].id,{is_archived:false});setArchivedProjects(prev=>prev.filter(p=>p!==name));setProjects(prev=>[...prev,name].sort());}catch(e){alert("Fehler: "+e.message);}
+  };
   const saveBudget=async(name)=>{
     const hours=parseFloat(budgetDraft[name]);
     const val=(isNaN(hours)||hours<=0)?null:hours;
@@ -1223,12 +1230,21 @@ export default function App(){
                         />
                         <span style={{fontSize:11,color:"#5a6090",whiteSpace:"nowrap"}}>h Budget</span>
                       </div>
-                      <button className="btn-danger" onClick={()=>removeProject(p)}>✕ Entfernen</button>
+                      <button className="btn-warn" onClick={()=>archiveProject(p)}>⬇ Archivieren</button>
                     </div>
                   ))}
                   {projects.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Projekte.</div>}
                 </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neues Projekt…" value={newProject} onChange={e=>setNewProject(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addProject()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addProject}>+</button></div>
+                {archivedProjects.length>0&&<>
+                  <div style={{fontSize:11,fontWeight:700,color:"#5a6090",letterSpacing:".07em",textTransform:"uppercase",marginTop:20,marginBottom:8}}>Archiviert</div>
+                  {archivedProjects.map(p=>(
+                    <div key={p} className="mgmt-list-item" style={{opacity:0.6}}>
+                      <span style={{fontSize:14,flex:1,textDecoration:"line-through"}}>{p}</span>
+                      <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>restoreProject(p)}>↩ Wiederherstellen</button>
+                    </div>
+                  ))}
+                </>}
               </div>
               <div className="card">
                 <div className="section-title">Tätigkeiten</div>
