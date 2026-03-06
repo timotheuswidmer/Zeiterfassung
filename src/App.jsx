@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd3d6Z2tsemVybGVmdGt2bmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMTU1MDksImV4cCI6MjA4NzY5MTUwOX0.1WnJd5-JJk4keOUk_VEV-WXiGgyNU1MHEZjxkaLkb54";
+const SUPABASE_URL = "DEINE_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "DEIN_SUPABASE_ANON_KEY";
 
 const sbHeaders = () => ({
   apikey: SUPABASE_ANON_KEY,
@@ -104,7 +104,15 @@ const CSS = `
   .filter-group{display:flex;flex-direction:column;gap:6px;flex:1 1 120px;}
   .range-sep{color:#5a6090;font-size:13px;align-self:flex-end;padding-bottom:13px;flex-shrink:0;}
   .action-btns{display:flex;gap:6px;flex-shrink:0;}
-  .export-btn-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .stopwatch-display{font-family:'DM Mono',monospace;font-size:42px;font-weight:500;color:#e0e4f8;letter-spacing:.05em;text-align:center;line-height:1;}
+  .stopwatch-running{color:#4dffaa;}
+  .btn-stop{background:rgba(232,79,106,0.15);color:#ff6b85;border:1px solid rgba(232,79,106,0.35);border-radius:12px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;display:inline-flex;align-items:center;gap:8px;}
+  .btn-stop:hover{background:rgba(232,79,106,0.28);transform:translateY(-1px);}
+  .btn-start{background:rgba(77,255,170,0.12);color:#4dffaa;border:1px solid rgba(77,255,170,0.3);border-radius:12px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;display:inline-flex;align-items:center;gap:8px;}
+  .btn-start:hover{background:rgba(77,255,170,0.22);transform:translateY(-1px);}
+  .btn-start:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .sw-dot{width:8px;height:8px;border-radius:50%;background:#4dffaa;animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   /* Checkbox list für Projektauswahl */
   .proj-check-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin:12px 0;}
   .proj-check-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #1e2235;border-radius:10px;cursor:pointer;transition:background .15s;}
@@ -114,6 +122,23 @@ const CSS = `
   .proj-check-item label{font-size:14px;cursor:pointer;flex:1;}
   .proj-check-item .proj-hours{font-family:'DM Mono',monospace;font-size:11px;color:#5a6090;}
   .select-all-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;}
+  .dropdown-wrap{position:relative;}
+  .dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:#1a1e2e;border:1px solid #2a2e48;border-radius:12px;padding:6px;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:300;animation:fadeIn .12s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+  .dropdown-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:#c0c8f0;border:none;background:none;width:100%;text-align:left;transition:background .15s;}
+  .dropdown-item:hover{background:#222640;color:#e0e4f8;}
+  .dropdown-item.danger{color:#ff6b85;}
+  .dropdown-item.danger:hover{background:rgba(232,79,106,0.12);}
+  .dropdown-divider{height:1px;background:#2a2e48;margin:4px 0;}
+  /* Autocomplete */
+  .ac-wrap{position:relative;}
+  .ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1e2e;border:1px solid #2a2e48;border-radius:10px;padding:4px;z-index:400;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .ac-item{padding:9px 12px;border-radius:7px;cursor:pointer;font-size:14px;color:#c0c8f0;transition:background .12s;}
+  .ac-item:hover,.ac-item.active{background:#2a2e48;color:#e0e4f8;}
+  .ac-item mark{background:none;color:#7c8bff;font-weight:700;}
+  /* Verwaltungsliste */
+  .mgmt-list-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #1e2235;border-radius:10px;margin-bottom:6px;gap:8px;}
+  .mgmt-list-item:last-child{margin-bottom:0;}
   .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(13,15,22,0.97);border-top:1px solid #1e2235;padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:100;gap:4px;justify-content:space-around;}
   .mobile-nav-btn{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;color:#5a6090;font-size:10px;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .18s;}
   .mobile-nav-btn.active{color:#7c8bff;background:rgba(79,93,232,0.12);}
@@ -538,21 +563,127 @@ function EntryModal({existing,projects,activities,onSave,onClose}){
   );
 }
 
+// ─── Autocomplete Komponente ──────────────────────────────────────────────────
+function Autocomplete({value,onChange,options,placeholder}){
+  const [query,setQuery]=useState(value||"");
+  const [open,setOpen]=useState(false);
+  const [idx,setIdx]=useState(-1);
+  const wrapRef=useRef(null);
+
+  // Filtert Optionen: sucht in ALLEN Wörtern
+  const filtered=useMemo(()=>{
+    const q=query.trim().toLowerCase();
+    if(!q)return options;
+    return options.filter(o=>
+      q.split(/\s+/).every(word=>o.toLowerCase().includes(word))
+    );
+  },[query,options]);
+
+  // Highlight matching parts
+  const highlight=(text,q)=>{
+    const words=q.trim().split(/\s+/).filter(Boolean);
+    if(!words.length)return text;
+    const regex=new RegExp(`(${words.map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")})`, "gi");
+    const parts=text.split(regex);
+    return parts.map((p,i)=>regex.test(p)?<mark key={i}>{p}</mark>:p);
+  };
+
+  const select=(opt)=>{setQuery(opt);onChange(opt);setOpen(false);setIdx(-1);};
+
+  const onKey=(e)=>{
+    if(!open){if(e.key==="ArrowDown"){setOpen(true);setIdx(0);}return;}
+    if(e.key==="ArrowDown"){e.preventDefault();setIdx(i=>Math.min(i+1,filtered.length-1));}
+    else if(e.key==="ArrowUp"){e.preventDefault();setIdx(i=>Math.max(i-1,0));}
+    else if(e.key==="Enter"){e.preventDefault();if(idx>=0&&filtered[idx])select(filtered[idx]);}
+    else if(e.key==="Escape"){setOpen(false);setIdx(-1);}
+  };
+
+  // Sync wenn value von aussen geändert wird (z.B. Reset)
+  useEffect(()=>{setQuery(value||"");},[value]);
+
+  // Schliessen bei Klick ausserhalb
+  useEffect(()=>{
+    const h=(e)=>{if(wrapRef.current&&!wrapRef.current.contains(e.target))setOpen(false);};
+    document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);
+  },[]);
+
+  return(
+    <div className="ac-wrap" ref={wrapRef}>
+      <input
+        className="input"
+        value={query}
+        placeholder={placeholder}
+        onChange={e=>{setQuery(e.target.value);onChange("");setOpen(true);setIdx(-1);}}
+        onFocus={()=>setOpen(true)}
+        onKeyDown={onKey}
+        autoComplete="off"
+      />
+      {open&&filtered.length>0&&(
+        <div className="ac-list">
+          {filtered.map((opt,i)=>(
+            <div key={opt} className={`ac-item${i===idx?" active":""}`}
+              onMouseDown={()=>select(opt)}>
+              {highlight(opt,query)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PwModal({onSave,onClose}){
+  const [oldPw,setOldPw]=useState(""); const [newPw,setNewPw]=useState(""); const [newPw2,setNewPw2]=useState("");
+  const [err,setErr]=useState(""); const [ok,setOk]=useState(false); const [saving,setSaving]=useState(false);
+  const save=async()=>{
+    if(!oldPw||!newPw||!newPw2){setErr("Alle Felder ausfüllen.");return;}
+    if(newPw!==newPw2){setErr("Neues Passwort stimmt nicht überein.");return;}
+    if(newPw.length<4){setErr("Passwort muss mindestens 4 Zeichen lang sein.");return;}
+    setSaving(true);setErr("");
+    try{await onSave(oldPw,newPw);setOk(true);setTimeout(onClose,1500);}
+    catch(e){setErr(e.message);}finally{setSaving(false);}
+  };
+  return(
+    <div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal" style={{maxWidth:380}}>
+      <div style={{fontSize:17,fontWeight:700,marginBottom:20}}>🔑 Passwort ändern</div>
+      {ok?<div className="msg-success">✓ Passwort erfolgreich geändert!</div>:(
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div className="field-group"><label className="label">Aktuelles Passwort</label><input className="input" type="password" value={oldPw} onChange={e=>setOldPw(e.target.value)} autoFocus/></div>
+          <div className="field-group"><label className="label">Neues Passwort</label><input className="input" type="password" value={newPw} onChange={e=>setNewPw(e.target.value)}/></div>
+          <div className="field-group"><label className="label">Neues Passwort wiederholen</label><input className="input" type="password" value={newPw2} onChange={e=>setNewPw2(e.target.value)} onKeyDown={e=>e.key==="Enter"&&save()}/></div>
+          {err&&<div className="msg-error">{err}</div>}
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}>
+            <button className="btn btn-ghost" onClick={onClose}>Abbrechen</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Speichern…":"Speichern"}</button>
+          </div>
+        </div>
+      )}
+    </div></div>
+  );
+}
+
 // ─── Hauptapp ─────────────────────────────────────────────────────────────────
 export default function App(){
   const isConfigured=SUPABASE_URL!=="DEINE_SUPABASE_URL"&&SUPABASE_ANON_KEY!=="DEIN_SUPABASE_ANON_KEY";
   const [currentUser,setCurrentUser]=useState(()=>{try{const s=sessionStorage.getItem("ze_session");return s?JSON.parse(s):null;}catch{return null;}});
-  const [view,setView]=useState("eintragen");
+  const [view,setView]=useState(()=>currentUser?.role==="admin"?"auswertung":"eintragen");
   const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]);
   const [dataReady,setDataReady]=useState(false);
   const isAdmin=currentUser?.role==="admin";
 
-  const [entryModal,setEntryModal]=useState(null); // nur für Bearbeiten
+  const [entryModal,setEntryModal]=useState(null);
   const [formMsg,setFormMsg]=useState(null);
   const [selectedDate,setSelectedDate]=useState(todayStr());
   const emptyForm=()=>({date:todayStr(),project:"",activity:"",hours:"",minutes:"",note:""});
   const [inlineForm,setInlineForm]=useState(emptyForm());
   const [inlineSaving,setInlineSaving]=useState(false);
+  const [dropdownOpen,setDropdownOpen]=useState(false);
+  const [pwModal,setPwModal]=useState(false);
+  // Stoppuhr
+  const [swRunning,setSwRunning]=useState(false);
+  const [swSeconds,setSwSeconds]=useState(0);
+  const swRef=useRef(null);
+  const swStartRef=useRef(null);
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState("");
   const [userModal,setUserModal]=useState(null);
   const [projektAuswahlOpen,setProjektAuswahlOpen]=useState(false);
@@ -587,6 +718,29 @@ export default function App(){
     catch(e){setFormMsg({type:"error",text:"Fehler: "+e.message});}
     finally{setInlineSaving(false);}
   };
+  const changePassword=async(oldPw,newPw)=>{
+    if(currentUser.password!==oldPw)throw new Error("Aktuelles Passwort ist falsch.");
+    const updated=await sb.update("users",currentUser.id,{password:newPw});
+    const u=updated[0];setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}
+  };
+  const swStart=()=>{
+    if(swRunning)return;
+    swStartRef.current=Date.now()-swSeconds*1000;
+    swRef.current=setInterval(()=>setSwSeconds(Math.floor((Date.now()-swStartRef.current)/1000)),500);
+    setSwRunning(true);
+  };
+  const swStop=()=>{
+    clearInterval(swRef.current);
+    setSwRunning(false);
+    // Zeit in Formular übernehmen
+    const h=Math.floor(swSeconds/3600);
+    const m=Math.floor((swSeconds%3600)/60);
+    setInlineForm(f=>({...f,hours:String(h),minutes:String(m)}));
+    setSwSeconds(0);
+  };
+  const swReset=()=>{clearInterval(swRef.current);setSwRunning(false);setSwSeconds(0);};
+  useEffect(()=>()=>clearInterval(swRef.current),[]);
+
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
   const addProject=async()=>{if(!newProject.trim())return;try{await sb.insert("projects",{name:newProject.trim()});setProjects(prev=>[...prev,newProject.trim()].sort());setNewProject("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProject=async(name)=>{try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("projects",r[0].id);setProjects(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
@@ -617,7 +771,7 @@ export default function App(){
   const maxStat=Math.max(...projectStats.map(s=>s[1]),1);
   const maxAct=Math.max(...activityStats.map(s=>s[1]),1);
 
-  const navItems=[{id:"eintragen",icon:"⏱",label:"Eintragen"},{id:"auswertung",icon:"📊",label:"Auswertung"},...(isAdmin?[{id:"abschluss",icon:"📋",label:"Abschluss"},{id:"verwaltung",icon:"⚙️",label:"Verwaltung"}]:[])];
+  const navItems=[...(!isAdmin?[{id:"eintragen",icon:"⏱",label:"Eintragen"}]:[]),{id:"auswertung",icon:"📊",label:"Auswertung"},...(isAdmin?[{id:"abschluss",icon:"📋",label:"Abschluss"},{id:"verwaltung",icon:"⚙️",label:"Verwaltung"}]:[])];
 
   if(!isConfigured)return <><style>{CSS}</style><ConfigScreen/></>;
   if(!currentUser) return <><style>{CSS}</style><LoginScreen onLogin={login}/></>;
@@ -628,6 +782,7 @@ export default function App(){
       <style>{CSS}</style>
       {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)}/>}
       {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)}/>}
+      {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
         <ProjektAuswahlModal
           allProjects={projectsInRange}
@@ -650,12 +805,30 @@ export default function App(){
           {navItems.map(n=><button key={n.id} className={`nav-btn${view===n.id?" active":""}`} onClick={()=>setView(n.id)}>{n.icon} {n.label}</button>)}
         </nav>
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <div className="header-name" style={{textAlign:"right"}}>
-            <div style={{fontSize:13,fontWeight:600}}>{currentUser.name}</div>
-            <span className={isAdmin?"badge-admin":"badge-emp"} style={{fontSize:10}}>{isAdmin?"Admin":"Mitarbeiter"}</span>
+          <div className="dropdown-wrap">
+            <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"4px 8px",borderRadius:10,transition:"background .15s"}}
+              onClick={()=>setDropdownOpen(o=>!o)}
+              onBlur={e=>{ if(!e.currentTarget.contains(e.relatedTarget)) setDropdownOpen(false); }}
+              tabIndex={0}>
+              <div className="header-name" style={{textAlign:"right"}}>
+                <div style={{fontSize:13,fontWeight:600}}>{currentUser.name}</div>
+                <span className={isAdmin?"badge-admin":"badge-emp"} style={{fontSize:10}}>{isAdmin?"Admin":"Mitarbeiter"}</span>
+              </div>
+              <div className="avatar" style={{width:32,height:32,fontSize:12}}>{initials(currentUser.name)}</div>
+              <span style={{color:"#5a6090",fontSize:11}}>▾</span>
+            </div>
+            {dropdownOpen&&(
+              <div className="dropdown-menu">
+                <div style={{padding:"8px 12px 6px",borderBottom:"1px solid #2a2e48",marginBottom:4}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"#e0e4f8"}}>{currentUser.name}</div>
+                  <div style={{fontSize:11,color:"#5a6090"}}>@{currentUser.username}</div>
+                </div>
+                <button className="dropdown-item" onClick={()=>{setDropdownOpen(false);setPwModal(true);}}>🔑 Passwort ändern</button>
+                <div className="dropdown-divider"/>
+                <button className="dropdown-item danger" onClick={logout}>🚪 Logout</button>
+              </div>
+            )}
           </div>
-          <div className="avatar" style={{width:32,height:32,fontSize:12}}>{initials(currentUser.name)}</div>
-          <button className="btn btn-ghost" style={{padding:"7px 14px",fontSize:13}} onClick={logout}>Logout</button>
         </div>
       </header>
       <nav className="mobile-nav">
@@ -694,27 +867,40 @@ export default function App(){
                 <div className="grid-2">
                   <div className="field-group">
                     <label className="label">Projekt *</label>
-                    <select className="input" value={inlineForm.project} onChange={e=>setInlineForm(f=>({...f,project:e.target.value}))}>
-                      <option value="">— wählen —</option>{projects.map(p=><option key={p}>{p}</option>)}
-                    </select>
+                    <Autocomplete value={inlineForm.project} onChange={v=>setInlineForm(f=>({...f,project:v}))} options={projects} placeholder="Projekt suchen…"/>
                   </div>
                   <div className="field-group">
                     <label className="label">Tätigkeit *</label>
-                    <select className="input" value={inlineForm.activity} onChange={e=>setInlineForm(f=>({...f,activity:e.target.value}))}>
-                      <option value="">— wählen —</option>{activities.map(a=><option key={a}>{a}</option>)}
-                    </select>
+                    <Autocomplete value={inlineForm.activity} onChange={v=>setInlineForm(f=>({...f,activity:v}))} options={activities} placeholder="Tätigkeit suchen…"/>
                   </div>
                 </div>
-                {/* Zeile 3: Zeit + Bemerkung */}
+                {/* Zeile 3: Zeit (manuell oder Stoppuhr) + Bemerkung */}
                 <div className="grid-2">
-                  <div style={{display:"flex",gap:10}}>
-                    <div className="field-group" style={{flex:1}}>
-                      <label className="label">Stunden *</label>
-                      <input type="number" min="0" max="24" className="input" placeholder="0" value={inlineForm.hours} onChange={e=>setInlineForm(f=>({...f,hours:e.target.value}))} inputMode="numeric"/>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {/* Stoppuhr */}
+                    <div style={{background:"rgba(10,12,19,0.6)",border:"1px solid #1e2235",borderRadius:12,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
+                      <div className={`stopwatch-display${swRunning?" stopwatch-running":""}`}>
+                        {String(Math.floor(swSeconds/3600)).padStart(2,"0")}:{String(Math.floor((swSeconds%3600)/60)).padStart(2,"0")}:{String(swSeconds%60).padStart(2,"0")}
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        {!swRunning
+                          ? <button className="btn-start" disabled={!inlineForm.project||!inlineForm.activity} onClick={swStart}>{swSeconds>0?"▶ Weiter":"▶ Starten"}</button>
+                          : <button className="btn-stop" onClick={swStop}>⏹ Anhalten & übernehmen</button>
+                        }
+                        {swSeconds>0&&!swRunning&&<button className="btn btn-ghost" style={{padding:"8px 14px",fontSize:13}} onClick={swReset}>↺ Reset</button>}
+                      </div>
+                      {!inlineForm.project&&<div style={{fontSize:11,color:"#5a6090"}}>Zuerst Projekt & Tätigkeit wählen</div>}
                     </div>
-                    <div className="field-group" style={{flex:1}}>
-                      <label className="label">Minuten</label>
-                      <input type="number" min="0" max="59" className="input" placeholder="0" value={inlineForm.minutes} onChange={e=>setInlineForm(f=>({...f,minutes:e.target.value}))} inputMode="numeric"/>
+                    {/* Manuelle Eingabe */}
+                    <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+                      <div className="field-group" style={{flex:1}}>
+                        <label className="label">Stunden *</label>
+                        <input type="number" min="0" max="24" className="input" placeholder="0" value={inlineForm.hours} onChange={e=>setInlineForm(f=>({...f,hours:e.target.value}))} inputMode="numeric"/>
+                      </div>
+                      <div className="field-group" style={{flex:1}}>
+                        <label className="label">Minuten</label>
+                        <input type="number" min="0" max="59" className="input" placeholder="0" value={inlineForm.minutes} onChange={e=>setInlineForm(f=>({...f,minutes:e.target.value}))} inputMode="numeric"/>
+                      </div>
                     </div>
                   </div>
                   <div className="field-group">
@@ -882,12 +1068,28 @@ export default function App(){
               </div>
               <div className="card">
                 <div className="section-title">Projekte</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>{projects.map(p=><span key={p} className="tag">{p}<button className="tag-remove" onClick={()=>removeProject(p)}>×</button></span>)}</div>
+                <div style={{marginBottom:16}}>
+                  {projects.map(p=>(
+                    <div key={p} className="mgmt-list-item">
+                      <span style={{fontSize:14}}>{p}</span>
+                      <button className="btn-danger" onClick={()=>removeProject(p)}>✕ Entfernen</button>
+                    </div>
+                  ))}
+                  {projects.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Projekte.</div>}
+                </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neues Projekt…" value={newProject} onChange={e=>setNewProject(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addProject()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addProject}>+</button></div>
               </div>
               <div className="card">
                 <div className="section-title">Tätigkeiten</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>{activities.map(a=><span key={a} className="tag">{a}<button className="tag-remove" onClick={()=>removeActivity(a)}>×</button></span>)}</div>
+                <div style={{marginBottom:16}}>
+                  {activities.map(a=>(
+                    <div key={a} className="mgmt-list-item">
+                      <span style={{fontSize:14}}>{a}</span>
+                      <button className="btn-danger" onClick={()=>removeActivity(a)}>✕ Entfernen</button>
+                    </div>
+                  ))}
+                  {activities.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Tätigkeiten.</div>}
+                </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neue Tätigkeit…" value={newActivity} onChange={e=>setNewActivity(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addActivity()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addActivity}>+</button></div>
               </div>
             </div>
