@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd3d6Z2tsemVybGVmdGt2bmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMTU1MDksImV4cCI6MjA4NzY5MTUwOX0.1WnJd5-JJk4keOUk_VEV-WXiGgyNU1MHEZjxkaLkb54";
+const SUPABASE_URL = "DEINE_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "DEIN_SUPABASE_ANON_KEY";
 
 const sbHeaders = () => ({
   apikey: SUPABASE_ANON_KEY,
@@ -531,8 +531,8 @@ function UserModal({existing,onSave,onClose}){
   );
 }
 
-function EntryModal({existing,projects,activities,onSave,onClose}){
-  const [form,setForm]=useState(existing?{date:existing.date,project:existing.project,activity:existing.activity,hours:String(Math.floor(existing.total_min/60)),minutes:String(existing.total_min%60),note:existing.note||""}:{date:todayStr(),project:"",activity:"",hours:"",minutes:"",note:""});
+function EntryModal({existing,projects,activities,products,onSave,onClose}){
+  const [form,setForm]=useState(existing?{date:existing.date,project:existing.project,activity:existing.activity,product:existing.product||"",hours:String(Math.floor(existing.total_min/60)),minutes:String(existing.total_min%60),note:existing.note||""}:{date:todayStr(),project:"",activity:"",product:"",hours:"",minutes:"",note:""});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const save=async()=>{
     if(!form.project||!form.activity||(!form.hours&&!form.minutes)){setErr("Bitte Projekt, Tätigkeit und Zeit ausfüllen.");return;}
@@ -546,15 +546,16 @@ function EntryModal({existing,projects,activities,onSave,onClose}){
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div className="grid-2">
           <div className="field-group"><label className="label">Datum *</label><input type="date" className="input" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></div>
-          <div className="field-group"><label className="label">Projekt *</label><select className="input" value={form.project} onChange={e=>setForm({...form,project:e.target.value})}><option value="">— wählen —</option>{projects.map(p=><option key={p}>{p}</option>)}</select></div>
+          <div className="field-group"><label className="label">Projekt *</label><Autocomplete value={form.project} onChange={v=>setForm(f=>({...f,project:v}))} options={projects} placeholder="Projekt suchen…"/></div>
         </div>
         <div className="grid-2">
-          <div className="field-group"><label className="label">Tätigkeit *</label><select className="input" value={form.activity} onChange={e=>setForm({...form,activity:e.target.value})}><option value="">— wählen —</option>{activities.map(a=><option key={a}>{a}</option>)}</select></div>
+          <div className="field-group"><label className="label">Tätigkeit *</label><Autocomplete value={form.activity} onChange={v=>setForm(f=>({...f,activity:v}))} options={activities} placeholder="Tätigkeit suchen…"/></div>
           <div style={{display:"flex",gap:10}}>
             <div className="field-group" style={{flex:1}}><label className="label">Stunden *</label><input type="number" min="0" max="24" className="input" placeholder="0" value={form.hours} onChange={e=>setForm({...form,hours:e.target.value})} inputMode="numeric"/></div>
             <div className="field-group" style={{flex:1}}><label className="label">Minuten</label><input type="number" min="0" max="59" className="input" placeholder="0" value={form.minutes} onChange={e=>setForm({...form,minutes:e.target.value})} inputMode="numeric"/></div>
           </div>
         </div>
+        <div className="field-group"><label className="label">Produkt <span style={{color:"#5a6090",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label><Autocomplete value={form.product} onChange={v=>setForm(f=>({...f,product:v}))} options={products} placeholder="Produkt suchen…"/></div>
         <div className="field-group"><label className="label">Bemerkung</label><textarea className="input" rows={2} placeholder="Optionale Bemerkung…" value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
         {err&&<div className="msg-error">{err}</div>}
         <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}><button className="btn btn-ghost" onClick={onClose}>Abbrechen</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Speichern…":"Speichern"}</button></div>
@@ -667,16 +668,24 @@ export default function App(){
   const isConfigured=SUPABASE_URL!=="DEINE_SUPABASE_URL"&&SUPABASE_ANON_KEY!=="DEIN_SUPABASE_ANON_KEY";
   const [currentUser,setCurrentUser]=useState(()=>{try{const s=sessionStorage.getItem("ze_session");return s?JSON.parse(s):null;}catch{return null;}});
   const [view,setView]=useState(()=>currentUser?.role==="admin"?"auswertung":"eintragen");
-  const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]);
+  const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]); const [products,setProducts]=useState([]);
   const [dataReady,setDataReady]=useState(false);
   const isAdmin=currentUser?.role==="admin";
 
   const [entryModal,setEntryModal]=useState(null);
   const [formMsg,setFormMsg]=useState(null);
   const [selectedDate,setSelectedDate]=useState(todayStr());
-  const emptyForm=()=>({date:todayStr(),project:"",activity:"",hours:"",minutes:"",note:""});
-  const [inlineForm,setInlineForm]=useState(emptyForm());
+  const FORM_KEY="ze_form_draft";
+  const emptyForm=()=>({date:todayStr(),project:"",activity:"",product:"",hours:"",minutes:"",note:""});
+  const [inlineForm,setInlineForm]=useState(()=>{
+    try{const s=localStorage.getItem(FORM_KEY);return s?JSON.parse(s):emptyForm();}catch{return emptyForm();}
+  });
   const [inlineSaving,setInlineSaving]=useState(false);
+
+  // Draft live in localStorage speichern
+  useEffect(()=>{
+    try{localStorage.setItem(FORM_KEY,JSON.stringify(inlineForm));}catch{}
+  },[inlineForm]);
   const [dropdownOpen,setDropdownOpen]=useState(false);
   const [pwModal,setPwModal]=useState(false);
   // Stoppuhr — persistent via Supabase (geräteübergreifend)
@@ -700,17 +709,32 @@ export default function App(){
     }).catch(()=>{});
   },[currentUser]);
 
-  // Ticker
+  // Ticker + Polling: alle 5s prüfen ob Timer noch in Supabase existiert
   useEffect(()=>{
     if(swRunning){
       swRef.current=setInterval(()=>{
         setSwSeconds(s=>s+1);
       },1000);
+      // Alle 5s prüfen ob Timer noch existiert (könnte auf anderem Gerät gestoppt worden sein)
+      const pollRef=setInterval(async()=>{
+        if(!swTimerId)return;
+        try{
+          const rows=await sb.select("timers",`?id=eq.${swTimerId}&select=id&limit=1`);
+          if(!rows.length){
+            // Timer wurde auf anderem Gerät gestoppt — hier aufräumen
+            clearInterval(swRef.current);
+            setSwRunning(false);
+            setSwTimerId(null);
+            setSwSeconds(0);
+          }
+        }catch{}
+      },5000);
+      return()=>{clearInterval(swRef.current);clearInterval(pollRef);};
     }else{
       clearInterval(swRef.current);
     }
     return()=>clearInterval(swRef.current);
-  },[swRunning]);
+  },[swRunning,swTimerId]);
 
   // Meta-Daten live in Supabase aktualisieren wenn Uhr läuft
   const swMetaRef=useRef(null);
@@ -748,7 +772,7 @@ export default function App(){
     setSwTimerId(null);
     setSwSeconds(0);
   };
-  const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState("");
+  const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState(""); const [newProduct,setNewProduct]=useState("");
   const [userModal,setUserModal]=useState(null);
   const [projektAuswahlOpen,setProjektAuswahlOpen]=useState(false);
 
@@ -760,7 +784,7 @@ export default function App(){
 
   const loadData=useCallback(async()=>{
     if(!isConfigured||!currentUser)return;
-    try{const [u,e,p,a]=await Promise.all([sb.select("users","?select=id,name,username,role,password&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name")]);setUsers(u);setEntries(e);setProjects(p.map(r=>r.name));setActivities(a.map(r=>r.name));}
+    try{const [u,e,p,a,pr]=await Promise.all([sb.select("users","?select=id,name,username,role,password&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name")]);setUsers(u);setEntries(e);setProjects(p.map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));}
     catch(err){console.error("Ladefehler:",err);}finally{setDataReady(true);}
   },[currentUser,isConfigured]);
 
@@ -768,9 +792,9 @@ export default function App(){
   const login=(u)=>{setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}setView(u.role==="admin"?"auswertung":"eintragen");};
   const logout=()=>{setCurrentUser(null);setDataReady(false);try{sessionStorage.removeItem("ze_session");}catch{}};
 
-  const saveEntry=async({date,project,activity,totalMin,note},isEdit=false)=>{
-    if(isEdit&&entryModal){const updated=await sb.update("entries",entryModal.id,{date,project,activity,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===entryModal.id?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);}
-    else{const created=await sb.insert("entries",{date,employee_id:currentUser.id,employee_name:currentUser.name,project,activity,total_min:totalMin,note:note||null});setEntries(prev=>[created[0],...prev]);setFormMsg({type:"success",text:"✓ Eintrag gespeichert!"});}
+  const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
+    if(isEdit&&entryModal){const updated=await sb.update("entries",entryModal.id,{date,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===entryModal.id?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);}
+    else{const created=await sb.insert("entries",{date,employee_id:currentUser.id,employee_name:currentUser.name,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>[created[0],...prev]);setFormMsg({type:"success",text:"✓ Eintrag gespeichert!"});}
     setTimeout(()=>setFormMsg(null),2500);
   };
   const submitInlineForm=async()=>{
@@ -778,7 +802,12 @@ export default function App(){
     const totalMin=(parseInt(inlineForm.hours||0)*60)+parseInt(inlineForm.minutes||0);
     if(totalMin<=0){setFormMsg({type:"error",text:"Zeit muss grösser als 0 sein."});return;}
     setInlineSaving(true);
-    try{await saveEntry({...inlineForm,totalMin});setInlineForm(f=>({...emptyForm(),date:f.date}));}
+    try{
+      await saveEntry({...inlineForm,totalMin});
+      const fresh=emptyForm();
+      setInlineForm(fresh);
+      try{localStorage.removeItem(FORM_KEY);}catch{}
+    }
     catch(e){setFormMsg({type:"error",text:"Fehler: "+e.message});}
     finally{setInlineSaving(false);}
   };
@@ -792,6 +821,8 @@ export default function App(){
   const removeProject=async(name)=>{try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("projects",r[0].id);setProjects(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const addActivity=async()=>{if(!newActivity.trim())return;try{await sb.insert("activities",{name:newActivity.trim()});setActivities(prev=>[...prev,newActivity.trim()].sort());setNewActivity("");}catch(e){alert("Fehler: "+e.message);}};
   const removeActivity=async(name)=>{try{const r=await sb.select("activities",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("activities",r[0].id);setActivities(prev=>prev.filter(a=>a!==name));}catch(e){alert("Fehler: "+e.message);}};
+  const addProduct=async()=>{if(!newProduct.trim())return;try{await sb.insert("products",{name:newProduct.trim()});setProducts(prev=>[...prev,newProduct.trim()].sort());setNewProduct("");}catch(e){alert("Fehler: "+e.message);}};
+  const removeProduct=async(name)=>{try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const saveUser=async(data)=>{if(userModal&&userModal!=="new"){const updated=await sb.update("users",userModal.id,{name:data.name,username:data.username,role:data.role,password:data.password||userModal.password});setUsers(prev=>prev.map(u=>u.id===userModal.id?updated[0]:u));if(currentUser.id===userModal.id){const f=updated[0];setCurrentUser(f);try{sessionStorage.setItem("ze_session",JSON.stringify(f));}catch{}}}else{const c=await sb.insert("users",data);setUsers(prev=>[...prev,c[0]]);}setUserModal(null);};
   const deleteUser=async(id)=>{if(id===currentUser.id||!window.confirm("Benutzer löschen?"))return;try{await sb.remove("users",id);setUsers(prev=>prev.filter(u=>u.id!==id));}catch(e){alert("Fehler: "+e.message);}};
 
@@ -827,7 +858,7 @@ export default function App(){
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
       {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)}/>}
-      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)}/>}
+      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)}/>}
       {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
         <ProjektAuswahlModal
@@ -909,7 +940,7 @@ export default function App(){
                     </div>
                   </div>
                 </div>
-                {/* Zeile 2: Projekt + Tätigkeit */}
+                {/* Zeile 2: Projekt + Tätigkeit + Produkt */}
                 <div className="grid-2">
                   <div className="field-group">
                     <label className="label">Projekt *</label>
@@ -919,6 +950,10 @@ export default function App(){
                     <label className="label">Tätigkeit *</label>
                     <Autocomplete value={inlineForm.activity} onChange={v=>setInlineForm(f=>({...f,activity:v}))} options={activities} placeholder="Tätigkeit suchen…"/>
                   </div>
+                </div>
+                <div className="field-group">
+                  <label className="label">Produkt <span style={{color:"#5a6090",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
+                  <Autocomplete value={inlineForm.product} onChange={v=>setInlineForm(f=>({...f,product:v}))} options={products} placeholder="Produkt suchen…"/>
                 </div>
                 {/* Zeile 3: Zeit (manuell oder Stoppuhr) + Bemerkung */}
                 <div className="grid-2">
@@ -1137,6 +1172,19 @@ export default function App(){
                   {activities.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Tätigkeiten.</div>}
                 </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neue Tätigkeit…" value={newActivity} onChange={e=>setNewActivity(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addActivity()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addActivity}>+</button></div>
+              </div>
+              <div className="card">
+                <div className="section-title">Produkte</div>
+                <div style={{marginBottom:16}}>
+                  {products.map(p=>(
+                    <div key={p} className="mgmt-list-item">
+                      <span style={{fontSize:14}}>{p}</span>
+                      <button className="btn-danger" onClick={()=>removeProduct(p)}>✕ Entfernen</button>
+                    </div>
+                  ))}
+                  {products.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Produkte.</div>}
+                </div>
+                <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neues Produkt…" value={newProduct} onChange={e=>setNewProduct(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addProduct()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addProduct}>+</button></div>
               </div>
             </div>
           </div>
