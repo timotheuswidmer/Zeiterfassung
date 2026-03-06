@@ -672,6 +672,7 @@ export default function App(){
   const [currentUser,setCurrentUser]=useState(()=>{try{const s=sessionStorage.getItem("ze_session");return s?JSON.parse(s):null;}catch{return null;}});
   const [view,setView]=useState(()=>currentUser?.role==="admin"?"auswertung":"eintragen");
   const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]); const [products,setProducts]=useState([]);
+  const [projectBudgets,setProjectBudgets]=useState({}); // {name: budget_hours|null}
   const [dataReady,setDataReady]=useState(false);
   const isAdmin=currentUser?.role==="admin";
 
@@ -805,6 +806,7 @@ export default function App(){
     setSwSeconds(0);
   };
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState(""); const [newProduct,setNewProduct]=useState("");
+  const [budgetDraft,setBudgetDraft]=useState({}); // {name: string} für Verwaltung-Inputs
   const [userModal,setUserModal]=useState(null);
   const [projektAuswahlOpen,setProjektAuswahlOpen]=useState(false);
 
@@ -816,7 +818,8 @@ export default function App(){
 
   const loadData=useCallback(async()=>{
     if(!isConfigured||!currentUser)return;
-    try{const [u,e,p,a,pr]=await Promise.all([sb.select("users","?select=id,name,username,role,password&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name")]);setUsers(u);setEntries(e);setProjects(p.map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));}
+    try{const [u,e,p,a,pr]=await Promise.all([sb.select("users","?select=id,name,username,role,password&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name")]);setUsers(u);setEntries(e);setProjects(p.map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));
+      const budgets=Object.fromEntries(p.map(r=>[r.name,r.budget_hours??null]));setProjectBudgets(budgets);setBudgetDraft(Object.fromEntries(p.map(r=>[r.name,r.budget_hours!=null?String(r.budget_hours):""])));}
     catch(err){console.error("Ladefehler:",err);}finally{setDataReady(true);}
   },[currentUser,isConfigured]);
 
@@ -849,6 +852,11 @@ export default function App(){
     const u=updated[0];setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}
   };
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+  const saveBudget=async(name)=>{
+    const hours=parseFloat(budgetDraft[name]);
+    const val=(isNaN(hours)||hours<=0)?null:hours;
+    try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.update("projects",r[0].id,{budget_hours:val});setProjectBudgets(prev=>({...prev,[name]:val}));}catch(e){alert("Fehler: "+e.message);}
+  };
   const addProject=async()=>{if(!newProject.trim())return;try{await sb.insert("projects",{name:newProject.trim()});setProjects(prev=>[...prev,newProject.trim()].sort());setNewProject("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProject=async(name)=>{try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("projects",r[0].id);setProjects(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const addActivity=async()=>{if(!newActivity.trim())return;try{await sb.insert("activities",{name:newActivity.trim()});setActivities(prev=>[...prev,newActivity.trim()].sort());setNewActivity("");}catch(e){alert("Fehler: "+e.message);}};
@@ -1088,9 +1096,26 @@ export default function App(){
             <div className="grid-2" style={{marginBottom:16}}>
               <div className="card"><div className="section-title">Nach Projekt</div>
                 {projectStats.length===0&&<div style={{color:"#5a6090",fontSize:13}}>Keine Daten</div>}
-                {projectStats.map(([name,min])=>(
-                  <div key={name} className="stat-row"><div style={{minWidth:90,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div><div className="bar-bg"><div className="bar-fill" style={{width:`${(min/maxStat)*100}%`}}/></div><div style={{minWidth:65,textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{fmtTime(min)}</div></div>
-                ))}
+                {projectStats.map(([name,min])=>{
+                  const budgetH=projectBudgets[name];
+                  const budgetMin=budgetH?budgetH*60:null;
+                  const pct=budgetMin?Math.min((min/budgetMin)*100,100):(min/maxStat)*100;
+                  const over=budgetMin&&min>budgetMin;
+                  const barColor=!budgetMin?"linear-gradient(90deg,#4f5de8,#7c8bff)":over?"linear-gradient(90deg,#c0392b,#ff4d6b)":min/budgetMin>0.8?"linear-gradient(90deg,#c07c00,#ffbe32)":"linear-gradient(90deg,#1da86a,#4dffaa)";
+                  return(
+                  <div key={name} className="stat-row">
+                    <div style={{minWidth:90,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
+                    <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
+                      <div className="bar-bg"><div className="bar-fill" style={{width:`${pct}%`,background:barColor}}/></div>
+                      {budgetMin&&<div style={{fontSize:10,color:over?"#ff4d6b":min/budgetMin>0.8?"#ffbe32":"#4dffaa"}}>
+                        {over?`+${fmtTime(min-budgetMin)} überschritten`:`${fmtTime(budgetMin-min)} verbleibend`}
+                      </div>}
+                    </div>
+                    <div style={{minWidth:65,textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>
+                      {fmtTime(min)}{budgetH&&<span style={{fontSize:10,color:"#5a6090",fontFamily:"'DM Sans',sans-serif"}}> / {budgetH}h</span>}
+                    </div>
+                  </div>);
+                })}
               </div>
               <div className="card"><div className="section-title">Nach Tätigkeit</div>
                 {activityStats.length===0&&<div style={{color:"#5a6090",fontSize:13}}>Keine Daten</div>}
@@ -1185,7 +1210,19 @@ export default function App(){
                 <div style={{marginBottom:16}}>
                   {projects.map(p=>(
                     <div key={p} className="mgmt-list-item">
-                      <span style={{fontSize:14}}>{p}</span>
+                      <span style={{fontSize:14,flex:1}}>{p}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <input
+                          type="number" min="0" step="0.5"
+                          className="input" placeholder="Budget h"
+                          style={{width:100,padding:"6px 10px",fontSize:13}}
+                          value={budgetDraft[p]??""}
+                          onChange={e=>setBudgetDraft(prev=>({...prev,[p]:e.target.value}))}
+                          onBlur={()=>saveBudget(p)}
+                          onKeyDown={e=>e.key==="Enter"&&saveBudget(p)}
+                        />
+                        <span style={{fontSize:11,color:"#5a6090",whiteSpace:"nowrap"}}>h Budget</span>
+                      </div>
                       <button className="btn-danger" onClick={()=>removeProject(p)}>✕ Entfernen</button>
                     </div>
                   ))}
