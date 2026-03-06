@@ -813,6 +813,8 @@ export default function App(){
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState(""); const [newProduct,setNewProduct]=useState("");
   const [budgetDraft,setBudgetDraft]=useState({}); // {name: string} für Verwaltung-Inputs
   const [editingProject,setEditingProject]=useState(null); // {orig, val}
+  const [editingActivity,setEditingActivity]=useState(null);
+  const [editingProduct,setEditingProduct]=useState(null);
   const [userModal,setUserModal]=useState(null);
   const [projektAuswahlOpen,setProjektAuswahlOpen]=useState(false);
 
@@ -872,6 +874,34 @@ export default function App(){
       setProjectBudgets(prev=>{const next={...prev};next[newName]=next[orig];delete next[orig];return next;});
       setBudgetDraft(prev=>{const next={...prev};next[newName]=next[orig]??"";delete next[orig];return next;});
       setEditingProject(null);
+    }catch(e){alert("Fehler: "+e.message);}
+  };
+  const renameActivity=async()=>{
+    if(!editingActivity)return;
+    const {orig,val}=editingActivity;
+    const newName=val.trim();
+    if(!newName||newName===orig){setEditingActivity(null);return;}
+    try{
+      const r=await sb.select("activities",`?name=eq.${encodeURIComponent(orig)}`);
+      if(r[0])await sb.update("activities",r[0].id,{name:newName});
+      await sb.updateWhere("entries",`activity=eq.${encodeURIComponent(orig)}`,{activity:newName});
+      setActivities(prev=>prev.map(a=>a===orig?newName:a).sort());
+      setEntries(prev=>prev.map(e=>e.activity===orig?{...e,activity:newName}:e));
+      setEditingActivity(null);
+    }catch(e){alert("Fehler: "+e.message);}
+  };
+  const renameProduct=async()=>{
+    if(!editingProduct)return;
+    const {orig,val}=editingProduct;
+    const newName=val.trim();
+    if(!newName||newName===orig){setEditingProduct(null);return;}
+    try{
+      const r=await sb.select("products",`?name=eq.${encodeURIComponent(orig)}`);
+      if(r[0])await sb.update("products",r[0].id,{name:newName});
+      await sb.updateWhere("entries",`product=eq.${encodeURIComponent(orig)}`,{product:newName});
+      setProducts(prev=>prev.map(p=>p===orig?newName:p).sort());
+      setEntries(prev=>prev.map(e=>e.product===orig?{...e,product:newName}:e));
+      setEditingProduct(null);
     }catch(e){alert("Fehler: "+e.message);}
   };
   const archiveProject=async(name)=>{
@@ -1280,7 +1310,14 @@ export default function App(){
                 <div style={{marginBottom:16}}>
                   {activities.map(a=>(
                     <div key={a} className="mgmt-list-item">
-                      <span style={{fontSize:14}}>{a}</span>
+                      {editingActivity?.orig===a
+                        ? <input autoFocus className="input" style={{flex:1,padding:"6px 10px",fontSize:14}} value={editingActivity.val}
+                            onChange={e=>setEditingActivity(ea=>({...ea,val:e.target.value}))}
+                            onKeyDown={e=>{if(e.key==="Enter")renameActivity();if(e.key==="Escape")setEditingActivity(null);}}
+                            onBlur={renameActivity}/>
+                        : <span style={{fontSize:14,flex:1}}>{a}</span>
+                      }
+                      <button className="btn-warn" style={{padding:"6px 10px",fontSize:12}} onClick={()=>editingActivity?.orig===a?renameActivity():setEditingActivity({orig:a,val:a})}>✎</button>
                       <button className="btn-danger" onClick={()=>removeActivity(a)}>✕ Entfernen</button>
                     </div>
                   ))}
@@ -1293,7 +1330,14 @@ export default function App(){
                 <div style={{marginBottom:16}}>
                   {products.map(p=>(
                     <div key={p} className="mgmt-list-item">
-                      <span style={{fontSize:14}}>{p}</span>
+                      {editingProduct?.orig===p
+                        ? <input autoFocus className="input" style={{flex:1,padding:"6px 10px",fontSize:14}} value={editingProduct.val}
+                            onChange={e=>setEditingProduct(ep=>({...ep,val:e.target.value}))}
+                            onKeyDown={e=>{if(e.key==="Enter")renameProduct();if(e.key==="Escape")setEditingProduct(null);}}
+                            onBlur={renameProduct}/>
+                        : <span style={{fontSize:14,flex:1}}>{p}</span>
+                      }
+                      <button className="btn-warn" style={{padding:"6px 10px",fontSize:12}} onClick={()=>editingProduct?.orig===p?renameProduct():setEditingProduct({orig:p,val:p})}>✎</button>
                       <button className="btn-danger" onClick={()=>removeProduct(p)}>✕ Entfernen</button>
                     </div>
                   ))}
