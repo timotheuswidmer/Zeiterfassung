@@ -106,11 +106,14 @@ const CSS = `
   .action-btns{display:flex;gap:6px;flex-shrink:0;}
   .stopwatch-display{font-family:'DM Mono',monospace;font-size:42px;font-weight:500;color:#e0e4f8;letter-spacing:.05em;text-align:center;line-height:1;}
   .stopwatch-running{color:#4dffaa;}
+  .stopwatch-paused{color:#ffbe32;}
   .btn-stop{background:rgba(232,79,106,0.15);color:#ff6b85;border:1px solid rgba(232,79,106,0.35);border-radius:12px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;display:inline-flex;align-items:center;gap:8px;}
   .btn-stop:hover{background:rgba(232,79,106,0.28);transform:translateY(-1px);}
   .btn-start{background:rgba(77,255,170,0.12);color:#4dffaa;border:1px solid rgba(77,255,170,0.3);border-radius:12px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;display:inline-flex;align-items:center;gap:8px;}
   .btn-start:hover{background:rgba(77,255,170,0.22);transform:translateY(-1px);}
   .btn-start:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .btn-pause{background:rgba(255,190,50,0.12);color:#ffbe32;border:1px solid rgba(255,190,50,0.3);border-radius:12px;padding:12px 22px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;display:inline-flex;align-items:center;gap:8px;}
+  .btn-pause:hover{background:rgba(255,190,50,0.22);transform:translateY(-1px);}
   .sw-dot{width:8px;height:8px;border-radius:50%;background:#4dffaa;animation:pulse 1s infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   /* Checkbox list für Projektauswahl */
@@ -700,41 +703,52 @@ export default function App(){
     sb.select("timers",`?user_id=eq.${currentUser.id}&select=*&limit=1`).then(rows=>{
       if(rows.length){
         const row=rows[0];
-        const secs=Math.floor((Date.now()-new Date(row.started_at).getTime())/1000);
-        setSwSeconds(secs);
         setSwTimerId(row.id);
-        setSwRunning(true);
         setInlineForm(f=>({...f,project:row.project||"",activity:row.activity||"",note:row.note||""}));
+        if(row.is_paused){
+          setSwSeconds(row.elapsed_seconds||0);
+          setSwRunning(false);
+        } else {
+          const secs=Math.floor((Date.now()-new Date(row.started_at).getTime())/1000);
+          setSwSeconds(secs);
+          setSwRunning(true);
+        }
       }
     }).catch(()=>{});
   },[currentUser]);
 
-  // Ticker + Polling: alle 5s prüfen ob Timer noch in Supabase existiert
+  // Ticker: läuft nur wenn Uhr aktiv ist
   useEffect(()=>{
-    if(swRunning){
-      swRef.current=setInterval(()=>{
-        setSwSeconds(s=>s+1);
-      },1000);
-      // Alle 5s prüfen ob Timer noch existiert (könnte auf anderem Gerät gestoppt worden sein)
-      const pollRef=setInterval(async()=>{
-        if(!swTimerId)return;
-        try{
-          const rows=await sb.select("timers",`?id=eq.${swTimerId}&select=id&limit=1`);
-          if(!rows.length){
-            // Timer wurde auf anderem Gerät gestoppt — hier aufräumen
-            clearInterval(swRef.current);
-            setSwRunning(false);
-            setSwTimerId(null);
-            setSwSeconds(0);
-          }
-        }catch{}
-      },5000);
-      return()=>{clearInterval(swRef.current);clearInterval(pollRef);};
-    }else{
-      clearInterval(swRef.current);
-    }
+    if(!swRunning){clearInterval(swRef.current);return;}
+    swRef.current=setInterval(()=>setSwSeconds(s=>s+1),1000);
     return()=>clearInterval(swRef.current);
-  },[swRunning,swTimerId]);
+  },[swRunning]);
+
+  // Polling: alle 5s prüfen ob Timer noch existiert — auch im Pause-Zustand
+  useEffect(()=>{
+    if(!swTimerId)return;
+    const pollRef=setInterval(async()=>{
+      try{
+        const rows=await sb.select("timers",`?id=eq.${swTimerId}&select=id,is_paused,elapsed_seconds&limit=1`);
+        if(!rows.length){
+          // Timer wurde auf anderem Gerät gelöscht
+          clearInterval(swRef.current);
+          setSwRunning(false);
+          setSwTimerId(null);
+          setSwSeconds(0);
+        } else if(rows[0].is_paused&&swRunning){
+          // Auf anderem Gerät pausiert
+          clearInterval(swRef.current);
+          setSwRunning(false);
+          setSwSeconds(rows[0].elapsed_seconds||0);
+        } else if(!rows[0].is_paused&&!swRunning){
+          // Auf anderem Gerät fortgesetzt — hier nur Ticker starten, Zeit kommt aus started_at beim nächsten Reload
+          setSwRunning(true);
+        }
+      }catch{}
+    },5000);
+    return()=>clearInterval(pollRef);
+  },[swTimerId,swRunning]);
 
   // Meta-Daten live in Supabase aktualisieren wenn Uhr läuft
   const swMetaRef=useRef(null);
@@ -750,10 +764,25 @@ export default function App(){
     if(swRunning)return;
     if(!inlineForm.project||!inlineForm.activity)return;
     try{
-      const rows=await sb.insert("timers",{user_id:currentUser.id,started_at:new Date(Date.now()-swSeconds*1000).toISOString(),project:inlineForm.project,activity:inlineForm.activity,note:inlineForm.note||null});
-      setSwTimerId(rows[0].id);
+      if(swTimerId){
+        // Fortsetzen nach Pause: Row in Supabase updaten
+        await sb.update("timers",swTimerId,{is_paused:false,elapsed_seconds:0,started_at:new Date(Date.now()-swSeconds*1000).toISOString(),project:inlineForm.project,activity:inlineForm.activity,note:inlineForm.note||null});
+      } else {
+        // Neu starten
+        const rows=await sb.insert("timers",{user_id:currentUser.id,started_at:new Date(Date.now()-swSeconds*1000).toISOString(),project:inlineForm.project,activity:inlineForm.activity,note:inlineForm.note||null,elapsed_seconds:0,is_paused:false});
+        setSwTimerId(rows[0].id);
+      }
       setSwRunning(true);
     }catch(e){alert("Fehler beim Starten: "+e.message);}
+  };
+  const swPause=async()=>{
+    if(!swRunning||!swTimerId)return;
+    clearInterval(swRef.current);
+    try{
+      await sb.update("timers",swTimerId,{is_paused:true,elapsed_seconds:swSeconds});
+      setSwRunning(false);
+      // swTimerId und swSeconds bleiben erhalten → geräteübergreifend sichtbar
+    }catch(e){alert("Fehler beim Pausieren: "+e.message);}
   };
   const swStop=async()=>{
     clearInterval(swRef.current);
@@ -961,16 +990,17 @@ export default function App(){
                   <div style={{display:"flex",flexDirection:"column",gap:8}}>
                     {/* Stoppuhr */}
                     <div style={{background:"rgba(10,12,19,0.6)",border:"1px solid #1e2235",borderRadius:12,padding:"12px 14px",display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
-                      <div className={`stopwatch-display${swRunning?" stopwatch-running":""}`}>
+                      <div className={`stopwatch-display${swRunning?" stopwatch-running":(!swRunning&&swTimerId?" stopwatch-paused":"")}`}>
                         {String(Math.floor(swSeconds/3600)).padStart(2,"0")}:{String(Math.floor((swSeconds%3600)/60)).padStart(2,"0")}:{String(swSeconds%60).padStart(2,"0")}
                       </div>
-                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
                         {!swRunning
                           ? <button className="btn-start" disabled={!inlineForm.project||!inlineForm.activity} onClick={swStart}>{swSeconds>0?"▶ Weiter":"▶ Starten"}</button>
-                          : <button className="btn-stop" onClick={swStop}>⏹ Anhalten & übernehmen</button>
+                          : <><button className="btn-pause" onClick={swPause}>⏸ Pause</button><button className="btn-stop" onClick={swStop}>⏹ Übernehmen</button></>
                         }
                         {swSeconds>0&&!swRunning&&<button className="btn btn-ghost" style={{padding:"8px 14px",fontSize:13}} onClick={swReset}>↺ Reset</button>}
                       </div>
+                      {!swRunning&&swTimerId&&swSeconds>0&&<div style={{fontSize:11,color:"#ffbe32"}}>⏸ Pausiert — auch auf anderen Geräten gespeichert</div>}
                       {!inlineForm.project&&<div style={{fontSize:11,color:"#5a6090"}}>Zuerst Projekt & Tätigkeit wählen</div>}
                     </div>
                     {/* Manuelle Eingabe */}
