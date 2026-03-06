@@ -1231,6 +1231,7 @@ export default function App(){
                         <span style={{fontSize:11,color:"#5a6090",whiteSpace:"nowrap"}}>h Budget</span>
                       </div>
                       <button className="btn-warn" onClick={()=>archiveProject(p)}>⬇ Archivieren</button>
+                      <button className="btn-danger" onClick={()=>removeProject(p)}>✕ Entfernen</button>
                     </div>
                   ))}
                   {projects.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Projekte.</div>}
