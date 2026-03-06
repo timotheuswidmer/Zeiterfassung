@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd3d6Z2tsemVybGVmdGt2bmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMTU1MDksImV4cCI6MjA4NzY5MTUwOX0.1WnJd5-JJk4keOUk_VEV-WXiGgyNU1MHEZjxkaLkb54";
+const SUPABASE_URL = "DEINE_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "DEIN_SUPABASE_ANON_KEY";
 
 const sbHeaders = () => ({
   apikey: SUPABASE_ANON_KEY,
@@ -760,8 +760,9 @@ export default function App(){
     if(swTimerId){try{await sb.remove("timers",swTimerId);}catch{}}
     setSwRunning(false);
     setSwTimerId(null);
-    const h=Math.floor(swSeconds/3600);
-    const m=Math.floor((swSeconds%3600)/60);
+    const totalMin=Math.round(swSeconds/60);
+    const h=Math.floor(totalMin/60);
+    const m=totalMin%60;
     setInlineForm(f=>({...f,hours:String(h),minutes:String(m)}));
     setSwSeconds(0);
   };
