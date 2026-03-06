@@ -790,9 +790,11 @@ export default function App(){
     setSwRunning(false);
     setSwTimerId(null);
     const totalMin=Math.round(swSeconds/60);
-    const h=Math.floor(totalMin/60);
-    const m=totalMin%60;
-    setInlineForm(f=>({...f,hours:String(h),minutes:String(m)}));
+    setInlineForm(f=>{
+      const prevMin=(parseInt(f.hours)||0)*60+(parseInt(f.minutes)||0);
+      const newMin=prevMin+totalMin;
+      return {...f,hours:String(Math.floor(newMin/60)),minutes:String(newMin%60)};
+    });
     setSwSeconds(0);
   };
   const swReset=async()=>{
