@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.co";
+const SUPABASE_URL = "Dhttps://pjwwzgklzerleftkvnag.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd3d6Z2tsemVybGVmdGt2bmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMTU1MDksImV4cCI6MjA4NzY5MTUwOX0.1WnJd5-JJk4keOUk_VEV-WXiGgyNU1MHEZjxkaLkb54";
 
 const sbHeaders = () => ({
@@ -679,75 +679,73 @@ export default function App(){
   const [inlineSaving,setInlineSaving]=useState(false);
   const [dropdownOpen,setDropdownOpen]=useState(false);
   const [pwModal,setPwModal]=useState(false);
-  // Stoppuhr — persistent via localStorage
-  const SW_KEY="ze_sw_start";
-  const SW_META="ze_sw_meta";
-  const [swRunning,setSwRunning]=useState(()=>!!localStorage.getItem(SW_KEY));
-  const [swSeconds,setSwSeconds]=useState(()=>{
-    const t=localStorage.getItem(SW_KEY);
-    return t?Math.floor((Date.now()-parseInt(t))/1000):0;
-  });
+  // Stoppuhr — persistent via Supabase (geräteübergreifend)
+  const [swRunning,setSwRunning]=useState(false);
+  const [swSeconds,setSwSeconds]=useState(0);
+  const [swTimerId,setSwTimerId]=useState(null);
   const swRef=useRef(null);
 
-  // Beim Laden: gespeicherte Meta-Daten ins Formular übernehmen
+  // Beim Laden: aktive Timer-Session aus Supabase laden
   useEffect(()=>{
-    const meta=localStorage.getItem(SW_META);
-    if(meta){
-      try{
-        const {project,activity,note}=JSON.parse(meta);
-        setInlineForm(f=>({...f,project:project||"",activity:activity||"",note:note||""}));
-      }catch{}
-    }
-  },[]);
+    if(!currentUser)return;
+    sb.select("timers",`?user_id=eq.${currentUser.id}&select=*&limit=1`).then(rows=>{
+      if(rows.length){
+        const row=rows[0];
+        const secs=Math.floor((Date.now()-new Date(row.started_at).getTime())/1000);
+        setSwSeconds(secs);
+        setSwTimerId(row.id);
+        setSwRunning(true);
+        setInlineForm(f=>({...f,project:row.project||"",activity:row.activity||"",note:row.note||""}));
+      }
+    }).catch(()=>{});
+  },[currentUser]);
 
   // Ticker
   useEffect(()=>{
     if(swRunning){
       swRef.current=setInterval(()=>{
-        const t=localStorage.getItem(SW_KEY);
-        if(t)setSwSeconds(Math.floor((Date.now()-parseInt(t))/1000));
-      },500);
+        setSwSeconds(s=>s+1);
+      },1000);
+    }else{
+      clearInterval(swRef.current);
     }
     return()=>clearInterval(swRef.current);
   },[swRunning]);
 
-  // Meta-Daten (Projekt, Tätigkeit, Bemerkung) live mitspeichern wenn Uhr läuft
+  // Meta-Daten live in Supabase aktualisieren wenn Uhr läuft
+  const swMetaRef=useRef(null);
   useEffect(()=>{
-    if(swRunning){
-      localStorage.setItem(SW_META,JSON.stringify({
-        project:inlineForm.project,
-        activity:inlineForm.activity,
-        note:inlineForm.note,
-      }));
-    }
-  },[swRunning,inlineForm.project,inlineForm.activity,inlineForm.note]);
+    if(!swRunning||!swTimerId)return;
+    clearTimeout(swMetaRef.current);
+    swMetaRef.current=setTimeout(()=>{
+      sb.update("timers",swTimerId,{project:inlineForm.project,activity:inlineForm.activity,note:inlineForm.note}).catch(()=>{});
+    },800);
+  },[inlineForm.project,inlineForm.activity,inlineForm.note,swRunning,swTimerId]);
 
-  const swStart=()=>{
+  const swStart=async()=>{
     if(swRunning)return;
-    const startTs=Date.now()-swSeconds*1000;
-    localStorage.setItem(SW_KEY,String(startTs));
-    localStorage.setItem(SW_META,JSON.stringify({
-      project:inlineForm.project,
-      activity:inlineForm.activity,
-      note:inlineForm.note,
-    }));
-    setSwRunning(true);
+    if(!inlineForm.project||!inlineForm.activity)return;
+    try{
+      const rows=await sb.insert("timers",{user_id:currentUser.id,started_at:new Date(Date.now()-swSeconds*1000).toISOString(),project:inlineForm.project,activity:inlineForm.activity,note:inlineForm.note||null});
+      setSwTimerId(rows[0].id);
+      setSwRunning(true);
+    }catch(e){alert("Fehler beim Starten: "+e.message);}
   };
-  const swStop=()=>{
+  const swStop=async()=>{
     clearInterval(swRef.current);
-    localStorage.removeItem(SW_KEY);
-    localStorage.removeItem(SW_META);
+    if(swTimerId){try{await sb.remove("timers",swTimerId);}catch{}}
     setSwRunning(false);
+    setSwTimerId(null);
     const h=Math.floor(swSeconds/3600);
     const m=Math.floor((swSeconds%3600)/60);
     setInlineForm(f=>({...f,hours:String(h),minutes:String(m)}));
     setSwSeconds(0);
   };
-  const swReset=()=>{
+  const swReset=async()=>{
     clearInterval(swRef.current);
-    localStorage.removeItem(SW_KEY);
-    localStorage.removeItem(SW_META);
+    if(swTimerId){try{await sb.remove("timers",swTimerId);}catch{}}
     setSwRunning(false);
+    setSwTimerId(null);
     setSwSeconds(0);
   };
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState("");
@@ -767,7 +765,7 @@ export default function App(){
   },[currentUser,isConfigured]);
 
   useEffect(()=>{if(currentUser&&isConfigured)loadData();},[loadData]);
-  const login=(u)=>{setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}setView("eintragen");};
+  const login=(u)=>{setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}setView(u.role==="admin"?"auswertung":"eintragen");};
   const logout=()=>{setCurrentUser(null);setDataReady(false);try{sessionStorage.removeItem("ze_session");}catch{}};
 
   const saveEntry=async({date,project,activity,totalMin,note},isEdit=false)=>{
