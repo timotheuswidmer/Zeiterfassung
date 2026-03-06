@@ -26,6 +26,10 @@ const sb = {
     const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`,{method:"DELETE",headers:sbHeaders()});
     if(!r.ok)throw new Error(await r.text());
   },
+  async updateWhere(table,filter,data) {
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`,{method:"PATCH",headers:{...sbHeaders(),Prefer:"return=minimal"},body:JSON.stringify(data)});
+    if(!r.ok)throw new Error(await r.text());
+  },
 };
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -808,6 +812,7 @@ export default function App(){
   };
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState(""); const [newProduct,setNewProduct]=useState("");
   const [budgetDraft,setBudgetDraft]=useState({}); // {name: string} für Verwaltung-Inputs
+  const [editingProject,setEditingProject]=useState(null); // {orig, val}
   const [userModal,setUserModal]=useState(null);
   const [projektAuswahlOpen,setProjektAuswahlOpen]=useState(false);
 
@@ -853,6 +858,22 @@ export default function App(){
     const u=updated[0];setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}
   };
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+  const renameProject=async()=>{
+    if(!editingProject)return;
+    const {orig,val}=editingProject;
+    const newName=val.trim();
+    if(!newName||newName===orig){setEditingProject(null);return;}
+    try{
+      const r=await sb.select("projects",`?name=eq.${encodeURIComponent(orig)}`);
+      if(r[0])await sb.update("projects",r[0].id,{name:newName});
+      await sb.updateWhere("entries",`project=eq.${encodeURIComponent(orig)}`,{project:newName});
+      setProjects(prev=>prev.map(p=>p===orig?newName:p).sort());
+      setEntries(prev=>prev.map(e=>e.project===orig?{...e,project:newName}:e));
+      setProjectBudgets(prev=>{const next={...prev};next[newName]=next[orig];delete next[orig];return next;});
+      setBudgetDraft(prev=>{const next={...prev};next[newName]=next[orig]??"";delete next[orig];return next;});
+      setEditingProject(null);
+    }catch(e){alert("Fehler: "+e.message);}
+  };
   const archiveProject=async(name)=>{
     try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.update("projects",r[0].id,{is_archived:true});setProjects(prev=>prev.filter(p=>p!==name));setArchivedProjects(prev=>[...prev,name].sort());}catch(e){alert("Fehler: "+e.message);}
   };
@@ -1217,7 +1238,14 @@ export default function App(){
                 <div style={{marginBottom:16}}>
                   {projects.map(p=>(
                     <div key={p} className="mgmt-list-item">
-                      <span style={{fontSize:14,flex:1}}>{p}</span>
+                      {editingProject?.orig===p
+                        ? <input autoFocus className="input" style={{flex:1,padding:"6px 10px",fontSize:14}} value={editingProject.val}
+                            onChange={e=>setEditingProject(ep=>({...ep,val:e.target.value}))}
+                            onKeyDown={e=>{if(e.key==="Enter")renameProject();if(e.key==="Escape")setEditingProject(null);}}
+                            onBlur={renameProject}/>
+                        : <span style={{fontSize:14,flex:1}}>{p}</span>
+                      }
+                      <button className="btn-warn" style={{padding:"6px 10px",fontSize:12}} onClick={()=>editingProject?.orig===p?renameProject():setEditingProject({orig:p,val:p})}>✎</button>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         <input
                           type="number" min="0" step="0.5"
