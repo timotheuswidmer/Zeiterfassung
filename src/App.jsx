@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd3d6Z2tsemVybGVmdGt2bmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMTU1MDksImV4cCI6MjA4NzY5MTUwOX0.1WnJd5-JJk4keOUk_VEV-WXiGgyNU1MHEZjxkaLkb54";
+const SUPABASE_URL = "DEINE_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "DEIN_SUPABASE_ANON_KEY";
 
 const sbHeaders = () => ({
   apikey: SUPABASE_ANON_KEY,
@@ -823,9 +823,9 @@ export default function App(){
                   <div style={{fontSize:13,fontWeight:600,color:"#e0e4f8"}}>{currentUser.name}</div>
                   <div style={{fontSize:11,color:"#5a6090"}}>@{currentUser.username}</div>
                 </div>
-                <button className="dropdown-item" onClick={()=>{setDropdownOpen(false);setPwModal(true);}}>🔑 Passwort ändern</button>
+                <button className="dropdown-item" onMouseDown={()=>{setDropdownOpen(false);setPwModal(true);}}>🔑 Passwort ändern</button>
                 <div className="dropdown-divider"/>
-                <button className="dropdown-item danger" onClick={logout}>🚪 Logout</button>
+                <button className="dropdown-item danger" onMouseDown={logout}>🚪 Logout</button>
               </div>
             )}
           </div>
