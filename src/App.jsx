@@ -821,7 +821,7 @@ export default function App(){
   const now=new Date();
   const [fromMonth,setFromMonth]=useState(now.getMonth()); const [fromYear,setFromYear]=useState(now.getFullYear());
   const [toMonth,setToMonth]=useState(now.getMonth());     const [toYear,setToYear]=useState(now.getFullYear());
-  const [filterProject,setFilterProject]=useState("alle"); const [filterActivity,setFilterActivity]=useState("alle"); const [filterEmployee,setFilterEmployee]=useState("alle");
+  const [filterProject,setFilterProject]=useState("alle"); const [filterActivity,setFilterActivity]=useState("alle"); const [filterEmployee,setFilterEmployee]=useState("alle"); const [filterNote,setFilterNote]=useState("");
   const [abschlussMonth,setAbschlussMonth]=useState(now.getMonth()); const [abschlussYear,setAbschlussYear]=useState(now.getFullYear());
 
   const loadData=useCallback(async()=>{
@@ -930,8 +930,9 @@ export default function App(){
   const filteredEntries=useMemo(()=>{
     const base=isAdmin?entries:myEntries;
     const fYM=toYM(fromYear,fromMonth),tYM=toYM(toYear,toMonth);
-    return base.filter(e=>{const d=new Date(e.date);const ym=toYM(d.getFullYear(),d.getMonth());return ym>=fYM&&ym<=tYM&&(filterProject==="alle"||e.project===filterProject)&&(filterActivity==="alle"||e.activity===filterActivity)&&(!isAdmin||filterEmployee==="alle"||e.employee_name===filterEmployee);});
-  },[entries,myEntries,isAdmin,fromMonth,fromYear,toMonth,toYear,filterProject,filterActivity,filterEmployee]);
+    const noteQ=filterNote.trim().toLowerCase();
+    return base.filter(e=>{const d=new Date(e.date);const ym=toYM(d.getFullYear(),d.getMonth());return ym>=fYM&&ym<=tYM&&(filterProject==="alle"||e.project===filterProject)&&(filterActivity==="alle"||e.activity===filterActivity)&&(!isAdmin||filterEmployee==="alle"||e.employee_name===filterEmployee)&&(!noteQ||(e.note||"").toLowerCase().includes(noteQ));});
+  },[entries,myEntries,isAdmin,fromMonth,fromYear,toMonth,toYear,filterProject,filterActivity,filterEmployee,filterNote]);
 
   const projectStats=useMemo(()=>{const m={};filteredEntries.forEach(e=>{if(!m[e.project])m[e.project]=0;m[e.project]+=e.total_min;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);},[filteredEntries]);
   const activityStats=useMemo(()=>{const m={};filteredEntries.forEach(e=>{if(!m[e.activity])m[e.activity]=0;m[e.activity]+=e.total_min;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);},[filteredEntries]);
@@ -1143,6 +1144,7 @@ export default function App(){
                 {isAdmin&&<select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterEmployee} onChange={e=>setFilterEmployee(e.target.value)}><option value="alle">Alle Mitarbeiter</option>{users.filter(u=>u.role==="employee").map(u=><option key={u.id}>{u.name}</option>)}</select>}
                 <select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterProject} onChange={e=>setFilterProject(e.target.value)}><option value="alle">Alle Projekte</option>{projects.map(p=><option key={p}>{p}</option>)}</select>
                 <select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterActivity} onChange={e=>setFilterActivity(e.target.value)}><option value="alle">Alle Tätigkeiten</option>{activities.map(a=><option key={a}>{a}</option>)}</select>
+                <input className="input" style={{width:"auto",flex:"1 1 160px"}} placeholder="Bemerkung enthält…" value={filterNote} onChange={e=>setFilterNote(e.target.value)}/>
               </div>
             </div>
 
