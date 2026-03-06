@@ -679,11 +679,77 @@ export default function App(){
   const [inlineSaving,setInlineSaving]=useState(false);
   const [dropdownOpen,setDropdownOpen]=useState(false);
   const [pwModal,setPwModal]=useState(false);
-  // Stoppuhr
-  const [swRunning,setSwRunning]=useState(false);
-  const [swSeconds,setSwSeconds]=useState(0);
+  // Stoppuhr — persistent via localStorage
+  const SW_KEY="ze_sw_start";
+  const SW_META="ze_sw_meta";
+  const [swRunning,setSwRunning]=useState(()=>!!localStorage.getItem(SW_KEY));
+  const [swSeconds,setSwSeconds]=useState(()=>{
+    const t=localStorage.getItem(SW_KEY);
+    return t?Math.floor((Date.now()-parseInt(t))/1000):0;
+  });
   const swRef=useRef(null);
-  const swStartRef=useRef(null);
+
+  // Beim Laden: gespeicherte Meta-Daten ins Formular übernehmen
+  useEffect(()=>{
+    const meta=localStorage.getItem(SW_META);
+    if(meta){
+      try{
+        const {project,activity,note}=JSON.parse(meta);
+        setInlineForm(f=>({...f,project:project||"",activity:activity||"",note:note||""}));
+      }catch{}
+    }
+  },[]);
+
+  // Ticker
+  useEffect(()=>{
+    if(swRunning){
+      swRef.current=setInterval(()=>{
+        const t=localStorage.getItem(SW_KEY);
+        if(t)setSwSeconds(Math.floor((Date.now()-parseInt(t))/1000));
+      },500);
+    }
+    return()=>clearInterval(swRef.current);
+  },[swRunning]);
+
+  // Meta-Daten (Projekt, Tätigkeit, Bemerkung) live mitspeichern wenn Uhr läuft
+  useEffect(()=>{
+    if(swRunning){
+      localStorage.setItem(SW_META,JSON.stringify({
+        project:inlineForm.project,
+        activity:inlineForm.activity,
+        note:inlineForm.note,
+      }));
+    }
+  },[swRunning,inlineForm.project,inlineForm.activity,inlineForm.note]);
+
+  const swStart=()=>{
+    if(swRunning)return;
+    const startTs=Date.now()-swSeconds*1000;
+    localStorage.setItem(SW_KEY,String(startTs));
+    localStorage.setItem(SW_META,JSON.stringify({
+      project:inlineForm.project,
+      activity:inlineForm.activity,
+      note:inlineForm.note,
+    }));
+    setSwRunning(true);
+  };
+  const swStop=()=>{
+    clearInterval(swRef.current);
+    localStorage.removeItem(SW_KEY);
+    localStorage.removeItem(SW_META);
+    setSwRunning(false);
+    const h=Math.floor(swSeconds/3600);
+    const m=Math.floor((swSeconds%3600)/60);
+    setInlineForm(f=>({...f,hours:String(h),minutes:String(m)}));
+    setSwSeconds(0);
+  };
+  const swReset=()=>{
+    clearInterval(swRef.current);
+    localStorage.removeItem(SW_KEY);
+    localStorage.removeItem(SW_META);
+    setSwRunning(false);
+    setSwSeconds(0);
+  };
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState("");
   const [userModal,setUserModal]=useState(null);
   const [projektAuswahlOpen,setProjektAuswahlOpen]=useState(false);
@@ -723,24 +789,6 @@ export default function App(){
     const updated=await sb.update("users",currentUser.id,{password:newPw});
     const u=updated[0];setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}
   };
-  const swStart=()=>{
-    if(swRunning)return;
-    swStartRef.current=Date.now()-swSeconds*1000;
-    swRef.current=setInterval(()=>setSwSeconds(Math.floor((Date.now()-swStartRef.current)/1000)),500);
-    setSwRunning(true);
-  };
-  const swStop=()=>{
-    clearInterval(swRef.current);
-    setSwRunning(false);
-    // Zeit in Formular übernehmen
-    const h=Math.floor(swSeconds/3600);
-    const m=Math.floor((swSeconds%3600)/60);
-    setInlineForm(f=>({...f,hours:String(h),minutes:String(m)}));
-    setSwSeconds(0);
-  };
-  const swReset=()=>{clearInterval(swRef.current);setSwRunning(false);setSwSeconds(0);};
-  useEffect(()=>()=>clearInterval(swRef.current),[]);
-
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
   const addProject=async()=>{if(!newProject.trim())return;try{await sb.insert("projects",{name:newProject.trim()});setProjects(prev=>[...prev,newProject.trim()].sort());setNewProject("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProject=async(name)=>{try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("projects",r[0].id);setProjects(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
