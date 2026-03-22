@@ -171,7 +171,7 @@ const CSS = `
 `;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const fmtTime = (min) => `${Math.floor(min/60)}h ${(min%60).toString().padStart(2,"0")}m`;
+const fmtTime = (min) => { const m=Math.round(min); return `${Math.floor(m/60)}h ${String(m%60).padStart(2,"0")}m`; };
 const fmtDecimal = (min) => (min/60).toFixed(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 const initials = (name) => name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
@@ -1418,39 +1418,6 @@ export default function App(){
                 <div key={label} className="summary-box"><div style={{color:"#8890b8",fontSize:10,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>{label}</div><div className="big-num">{val}</div></div>
               ))}
             </div>
-            {(()=>{
-              const now=new Date();
-              const curM=now.getMonth();const curY=now.getFullYear();
-              const salariedVisible=isAdmin
-                ?(filterEmployee==="alle"?users.filter(u=>u.employment_type==="salaried"):users.filter(u=>u.employment_type==="salaried"&&u.name===filterEmployee))
-                :[users.find(u=>u.id===currentUser?.id)].filter(u=>u?.employment_type==="salaried");
-              if(!salariedVisible.length)return null;
-              return(
-                <div className="card" style={{marginBottom:16}}>
-                  <div className="section-title">Stundenssaldo (kumuliert bis {MONTHS[curM]} {curY})</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                    {salariedVisible.map(u=>{
-                      if(!u)return null;
-                      const rb=calcRunningBalance(u.id,curM,curY);
-                      const si=calcSollIst(u.id,curM,curY);
-                      if(!rb||!si)return null;
-                      const cumColor=rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85";
-                      const monColor=si.diff>=0?"#4dffaa":"#ff6b85";
-                      return(
-                        <div key={u.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,padding:"10px 0",borderBottom:"1px solid #1e2235"}}>
-                          <div style={{fontWeight:600,fontSize:14}}>{u.name}</div>
-                          <div style={{display:"flex",gap:20,flexWrap:"wrap",fontSize:13}}>
-                            <div style={{color:"#8890b8"}}>Monat: Soll <span style={{color:"#e0e4f8"}}>{fmtTime(si.sollMin)}</span> · Ist <span style={{color:"#e0e4f8"}}>{fmtTime(si.istMin)}</span> · <span style={{color:monColor,fontWeight:700}}>{si.diff>=0?"+":""}{fmtTime(Math.abs(si.diff))}</span></div>
-                            <div style={{fontWeight:700,fontSize:15}}>Saldo: <span style={{color:cumColor}}>{rb.cumulativeDiff>=0?"+":""}{fmtTime(Math.abs(rb.cumulativeDiff))}</span></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
             <div className="grid-2" style={{marginBottom:16}}>
               <div className="card"><div className="section-title">Nach Projekt</div>
                 {projectStats.length===0&&<div style={{color:"#8890b8",fontSize:13}}>Keine Daten</div>}
@@ -1482,43 +1449,51 @@ export default function App(){
                 ))}
               </div>
             </div>
-            {/* Ferienguthaben-Übersicht für Festangestellte */}
+            {/* Kombinierte Übersicht: Stundensaldo + Ferienguthaben */}
             {(()=>{
-              const salariedUsers=users.filter(u=>u.employment_type==="salaried"&&u.role!=="admin");
+              const now=new Date();const curM=now.getMonth();const curY=now.getFullYear();
+              const salariedUsers=users.filter(u=>u.employment_type==="salaried");
               if(!salariedUsers.length)return null;
               const relevant=isAdmin?(filterEmployee==="alle"?salariedUsers:salariedUsers.filter(u=>u.name===filterEmployee)):salariedUsers.filter(u=>u.id===currentUser?.id);
               if(!relevant.length)return null;
               return(
                 <div className="card" style={{marginBottom:16}}>
-                  <div className="section-title">Ferienguthaben Festangestellte</div>
+                  <div className="section-title">Übersicht Festangestellte — {MONTHS[curM]} {curY}</div>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse"}}>
                       <thead><tr style={{fontSize:11,color:"#8890b8",textTransform:"uppercase",letterSpacing:".06em"}}>
                         <th style={{textAlign:"left",padding:"6px 8px",fontWeight:700}}>Mitarbeiter</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Jahreskapazität</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Soll Monat</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Monat</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Monat</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Saldo kumuliert</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien/Jahr</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Anspruch</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Verbleibend</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Kranktage</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Rest</th>
                       </tr></thead>
                       <tbody>{relevant.map(u=>{
                         const bal=calcVacBalance(u.id);
-                        if(!bal)return null;
+                        const si=calcSollIst(u.id,curM,curY);
+                        const rb=calcRunningBalance(u.id,curM,curY);
+                        if(!bal&&!si)return null;
                         const wd2=parseWorkDays(u.work_days);
-                        const curY=new Date().getFullYear();
                         let wdCount=0;
                         for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd2.includes(dow))wdCount++;}
                         const capacityDays=wdCount-bal.holidayDaysThisYear;
                         const capacityH=Math.round(capacityDays*(parseFloat(u.daily_hours)||0)*10)/10;
+                        const monColor=si?(si.diff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
+                        const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
-                          <td style={{padding:"8px 8px",fontSize:13,fontWeight:500}}>{u.name}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH} h<span style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif"}}> ({capacityDays} T)</span></td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal.vacPerYear.toFixed(1)} T</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{bal.total.toFixed(1)} T</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal.used.toFixed(1)} T</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining.toFixed(1)} T</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal.sick}</td>
+                          <td style={{padding:"8px 8px",fontSize:13,fontWeight:600}}>{u.name}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> ({capacityDays}T)</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {bal.holidayDaysThisYear}T Feiertage ({Math.round(bal.holidayDaysThisYear*(parseFloat(u.daily_hours)||0)*10)/10}h)</div></td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{si?fmtTime(si.sollMin):"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:cumColor}}>{rb?(rb.cumulativeDiff>=0?"+":"")+fmtTime(Math.abs(rb.cumulativeDiff)):"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal?bal.vacPerYear.toFixed(1)+" T":"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal?bal.used.toFixed(1)+" T":"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal?(bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"):"#8890b8"}}>{bal?bal.remaining.toFixed(1)+" T":"—"}</td>
                         </tr>);
                       })}</tbody>
                     </table>
