@@ -1289,13 +1289,13 @@ export default function App(){
                 {isSalaried&&bal&&(
                   <div className="balance-box" style={{marginBottom:16}}>
                     <div style={{fontSize:12,fontWeight:700,color:"#9aa2c8",letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Ferienguthaben (rollend)</div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch total (kumuliert)</span><strong>{bal.total} Tage</strong></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Davon Ferientage/Jahr</span><span>{bal.vacPerYear} Tage × {new Date().getFullYear()-Math.max(0,new Date().getFullYear()-1)+1} Jahr(e)</span></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Feiertage {new Date().getFullYear()} (auf Arbeitstagen)</span><span>{bal.holidayDaysThisYear} Tage</span></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen (Frei)</span><span style={{color:"#ff6b85"}}>−{bal.used} Tage</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch total (kumuliert)</span><strong>{bal.total.toFixed(1)} Tage</strong></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Davon Ferientage/Jahr</span><span>{bal.vacPerYear.toFixed(1)} Tage × {new Date().getFullYear()-Math.max(0,new Date().getFullYear()-1)+1} Jahr(e)</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Feiertage {new Date().getFullYear()} (auf Arbeitstagen)</span><span>{bal.holidayDaysThisYear.toFixed(1)} Tage</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen (Frei)</span><span style={{color:"#ff6b85"}}>−{bal.used.toFixed(1)} Tage</span></div>
                     <div style={{borderTop:"1px solid rgba(79,93,232,0.2)",paddingTop:8,marginTop:4}} className="balance-row">
                       <span style={{fontWeight:700}}>Verbleibend</span>
-                      <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa",fontSize:16}}>{bal.remaining} Tage</strong>
+                      <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa",fontSize:16}}>{bal.remaining.toFixed(1)} Tage</strong>
                     </div>
                     {bal.sick>0&&<div className="balance-row"><span style={{color:"#8890b8"}}>Kranktage total</span><span>{bal.sick} Tage</span></div>}
                   </div>
