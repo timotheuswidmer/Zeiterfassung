@@ -1055,15 +1055,17 @@ export default function App(){
     const curYear=new Date().getFullYear();
     const allDates=[...entries.filter(e=>e.employee_id===userId).map(e=>e.date),...absences.filter(a=>a.user_id===userId).map(a=>a.date)];
     const minYear=allDates.length>0?Math.min(...allDates.map(d=>parseInt(d.substring(0,4)))):curYear;
+    const pensum=wd.length/5;
+    const vacPerYearScaled=parseFloat(user.vacation_days_per_year||25)*pensum;
     let totalDays=0;
     for(let y=minYear;y<=curYear;y++){
-      totalDays+=parseFloat(user.vacation_days_per_year||25);
+      totalDays+=vacPerYearScaled;
       holidays.filter(h=>h.year===y).forEach(h=>{const dow=(new Date(h.date).getDay())||7;if(wd.includes(dow))totalDays++;});
     }
     const usedFrei=absences.filter(a=>a.user_id===userId&&a.type==="frei").length;
     const sickDays=absences.filter(a=>a.user_id===userId&&a.type==="krank").length;
     const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).filter(h=>{const dow=(new Date(h.date).getDay())||7;return wd.includes(dow);}).length;
-    return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear:parseFloat(user.vacation_days_per_year||25)};
+    return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear:vacPerYearScaled};
   },[users,absences,holidays,entries]);
 
   const calcSollIst=useCallback((userId,month,year)=>{
