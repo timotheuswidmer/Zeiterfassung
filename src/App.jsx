@@ -42,11 +42,11 @@ const CSS = `
   body{background:#0a0c13;color:#e0e4f8;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;}
   ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:#12141e;}::-webkit-scrollbar-thumb{background:#2e3150;border-radius:3px;}
   input,select,textarea,button{font-family:'DM Sans',sans-serif;outline:none;}
-  .nav-btn{background:none;border:none;cursor:pointer;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:500;color:#7880a8;transition:all .18s;white-space:nowrap;}
+  .nav-btn{background:none;border:none;cursor:pointer;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:500;color:#9aa2c8;transition:all .18s;white-space:nowrap;}
   .nav-btn:hover{background:#1a1e2e;color:#e0e4f8;}.nav-btn.active{background:#4f5de8;color:#fff;}
   .card{background:rgba(19,22,32,0.8);border:1px solid #1e2235;border-radius:16px;padding:24px;}
   .field-group{display:flex;flex-direction:column;gap:6px;}
-  .label{font-size:11px;font-weight:700;color:#5a6090;letter-spacing:.07em;text-transform:uppercase;}
+  .label{font-size:11px;font-weight:700;color:#8890b8;letter-spacing:.07em;text-transform:uppercase;}
   .input{background:#0a0c13;border:1.5px solid #1e2235;border-radius:10px;padding:11px 14px;font-size:15px;color:#e0e4f8;transition:border .18s;width:100%;-webkit-appearance:none;}
   .input:focus{border-color:#4f5de8;}
   select.input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235a6090' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer;}
@@ -55,7 +55,7 @@ const CSS = `
   .btn-primary{background:#4f5de8;color:#fff;}
   .btn-primary:hover{background:#6472f5;transform:translateY(-1px);box-shadow:0 4px 20px rgba(79,93,232,0.3);}
   .btn-primary:active{transform:translateY(0);}.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-  .btn-ghost{background:#1a1e2e;color:#7880a8;}.btn-ghost:hover{background:#222640;color:#e0e4f8;}
+  .btn-ghost{background:#1a1e2e;color:#9aa2c8;}.btn-ghost:hover{background:#222640;color:#e0e4f8;}
   .btn-full{width:100%;justify-content:center;padding:13px;}
   .btn-excel{background:rgba(29,168,106,0.15);color:#4dffaa;border:1px solid rgba(29,168,106,0.35);font-size:13px;padding:8px 14px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .btn-excel:hover{background:rgba(29,168,106,0.28);transform:translateY(-1px);}
@@ -75,7 +75,7 @@ const CSS = `
   .msg-error{background:#2e0d14;border:1px solid #6b1a2d;color:#ff8099;border-radius:10px;padding:10px 16px;font-size:13px;}
   .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{text-align:left;padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a6090;border-bottom:1px solid #1e2235;white-space:nowrap;}
+  th{text-align:left;padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8890b8;border-bottom:1px solid #1e2235;white-space:nowrap;}
   td{padding:11px 14px;border-bottom:1px solid rgba(19,22,32,0.6);vertical-align:middle;}
   tr:last-child td{border-bottom:none;}tbody tr:hover td{background:rgba(26,30,46,0.5);}
   .bar-bg{background:#1e2235;border-radius:4px;height:7px;flex:1;overflow:hidden;}
@@ -87,7 +87,7 @@ const CSS = `
   .chip-blue{background:#141a38;border-color:#2a3580;color:#7c8bff;}
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-  .section-title{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#5a6090;margin-bottom:18px;}
+  .section-title{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8890b8;margin-bottom:18px;}
   .big-num{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:#e0e4f8;line-height:1.2;}
   .summary-box{background:rgba(10,12,19,0.6);border:1px solid #1e2235;border-radius:12px;padding:16px 18px;}
   .badge-admin{background:#1a1438;border:1px solid #5a4af0;color:#a89aff;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;display:inline-block;}
@@ -99,14 +99,14 @@ const CSS = `
   .abschluss-card{background:rgba(19,22,32,0.8);border:1px solid #1e2235;border-radius:14px;padding:20px;margin-bottom:14px;}
   .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;}
   .modal{background:#131620;border:1px solid #2a2e48;border-radius:20px;padding:28px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
-  .pw-hint{font-size:11px;color:#5a6090;margin-top:4px;}
+  .pw-hint{font-size:11px;color:#8890b8;margin-top:4px;}
   .loading{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0c13;flex-direction:column;gap:16px;}
   .spinner{width:32px;height:32px;border:3px solid #1e2235;border-top-color:#4f5de8;border-radius:50%;animation:spin .7s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  .config-code{background:#0a0c13;border:1px solid #1e2235;border-radius:12px;padding:18px;font-size:12px;font-family:'DM Mono',monospace;color:#7880a8;line-height:2;margin:16px 0;}
-  .filter-label{font-size:11px;font-weight:700;color:#5a6090;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;}
+  .config-code{background:#0a0c13;border:1px solid #1e2235;border-radius:12px;padding:18px;font-size:12px;font-family:'DM Mono',monospace;color:#9aa2c8;line-height:2;margin:16px 0;}
+  .filter-label{font-size:11px;font-weight:700;color:#8890b8;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;}
   .filter-group{display:flex;flex-direction:column;gap:6px;flex:1 1 120px;}
-  .range-sep{color:#5a6090;font-size:13px;align-self:flex-end;padding-bottom:13px;flex-shrink:0;}
+  .range-sep{color:#8890b8;font-size:13px;align-self:flex-end;padding-bottom:13px;flex-shrink:0;}
   .action-btns{display:flex;gap:6px;flex-shrink:0;}
   .stopwatch-display{font-family:'DM Mono',monospace;font-size:42px;font-weight:500;color:#e0e4f8;letter-spacing:.05em;text-align:center;line-height:1;}
   .stopwatch-running{color:#4dffaa;}
@@ -118,6 +118,12 @@ const CSS = `
   .btn-start:disabled{opacity:.4;cursor:not-allowed;transform:none;}
   .btn-pause{background:rgba(255,190,50,0.12);color:#ffbe32;border:1px solid rgba(255,190,50,0.3);border-radius:12px;padding:12px 22px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;display:inline-flex;align-items:center;gap:8px;}
   .btn-pause:hover{background:rgba(255,190,50,0.22);transform:translateY(-1px);}
+  .day-chip{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:1.5px solid #1e2235;font-size:11px;font-weight:700;cursor:pointer;color:#8890b8;transition:all .15s;user-select:none;}.day-chip.active{background:#4f5de8;border-color:#4f5de8;color:#fff;}
+  .badge-frei{background:rgba(77,255,170,0.12);color:#4dffaa;border:1px solid rgba(77,255,170,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;}
+  .badge-krank{background:rgba(255,107,133,0.12);color:#ff6b85;border:1px solid rgba(255,107,133,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;}
+  .balance-box{background:rgba(79,93,232,0.08);border:1px solid rgba(79,93,232,0.2);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:8px;}
+  .balance-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+  .soll-ist-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
   .sw-dot{width:8px;height:8px;border-radius:50%;background:#4dffaa;animation:pulse 1s infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   /* Checkbox list für Projektauswahl */
@@ -127,7 +133,7 @@ const CSS = `
   .proj-check-item.checked{border-color:#4f5de8;background:rgba(79,93,232,0.08);}
   .proj-check-item input[type=checkbox]{width:16px;height:16px;accent-color:#4f5de8;cursor:pointer;flex-shrink:0;}
   .proj-check-item label{font-size:14px;cursor:pointer;flex:1;}
-  .proj-check-item .proj-hours{font-family:'DM Mono',monospace;font-size:11px;color:#5a6090;}
+  .proj-check-item .proj-hours{font-family:'DM Mono',monospace;font-size:11px;color:#8890b8;}
   .select-all-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;}
   .dropdown-wrap{position:relative;}
   .dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:#1a1e2e;border:1px solid #2a2e48;border-radius:12px;padding:6px;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:300;animation:fadeIn .12s ease;}
@@ -147,7 +153,7 @@ const CSS = `
   .mgmt-list-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #1e2235;border-radius:10px;margin-bottom:6px;gap:8px;}
   .mgmt-list-item:last-child{margin-bottom:0;}
   .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(13,15,22,0.97);border-top:1px solid #1e2235;padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:100;gap:4px;justify-content:space-around;}
-  .mobile-nav-btn{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;color:#5a6090;font-size:10px;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .18s;}
+  .mobile-nav-btn{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;color:#8890b8;font-size:10px;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .18s;}
   .mobile-nav-btn.active{color:#7c8bff;background:rgba(79,93,232,0.12);}
   .mobile-nav-btn .icon{font-size:20px;line-height:1;}
   @media(max-width:680px){
@@ -440,14 +446,14 @@ function ProjektAuswahlModal({allProjects,projectStats,onExport,onClose}){
     <div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
         <div style={{fontSize:17,fontWeight:700,marginBottom:6}}>Projektauswertung exportieren</div>
-        <div style={{fontSize:13,color:"#5a6090",marginBottom:16}}>Wähle die Projekte, die du exportieren möchtest.</div>
+        <div style={{fontSize:13,color:"#8890b8",marginBottom:16}}>Wähle die Projekte, die du exportieren möchtest.</div>
 
         <div className="select-all-row">
           <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:600,color:"#7c8bff"}}>
             <input type="checkbox" checked={allChecked} onChange={toggleAll} style={{width:16,height:16,accentColor:"#4f5de8"}}/>
             Alle auswählen
           </label>
-          <span style={{fontSize:12,color:"#5a6090"}}>{selected.size} / {allProjects.length} ausgewählt</span>
+          <span style={{fontSize:12,color:"#8890b8"}}>{selected.size} / {allProjects.length} ausgewählt</span>
         </div>
 
         <div className="proj-check-list">
@@ -458,7 +464,7 @@ function ProjektAuswahlModal({allProjects,projectStats,onExport,onClose}){
               {statsMap[p]&&<span className="proj-hours">{fmtTime(statsMap[p])}</span>}
             </div>
           ))}
-          {allProjects.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"12px 0",textAlign:"center"}}>Keine Projekte im gewählten Zeitraum.</div>}
+          {allProjects.length===0&&<div style={{color:"#8890b8",fontSize:13,padding:"12px 0",textAlign:"center"}}>Keine Projekte im gewählten Zeitraum.</div>}
         </div>
 
         <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:16}}>
@@ -479,14 +485,14 @@ function ConfigScreen(){
       <div style={{textAlign:"center",marginBottom:24}}>
         <div style={{width:54,height:54,background:"linear-gradient(135deg,#e84f6a,#f06050)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 14px"}}>⚙️</div>
         <div style={{fontSize:20,fontWeight:700}}>Supabase nicht konfiguriert</div>
-        <div style={{color:"#5a6090",fontSize:13,marginTop:8,lineHeight:1.7}}>Öffne <code style={{background:"#1a1e2e",padding:"1px 6px",borderRadius:4,color:"#7c8bff"}}>src/App.jsx</code> und trage deine Zugangsdaten in Zeile 5–6 ein.</div>
+        <div style={{color:"#8890b8",fontSize:13,marginTop:8,lineHeight:1.7}}>Öffne <code style={{background:"#1a1e2e",padding:"1px 6px",borderRadius:4,color:"#7c8bff"}}>src/App.jsx</code> und trage deine Zugangsdaten in Zeile 5–6 ein.</div>
       </div>
       <div className="config-code">
-        <div style={{color:"#5a6090",fontSize:11,marginBottom:4}}>// Zeilen 5–6 anpassen:</div>
+        <div style={{color:"#8890b8",fontSize:11,marginBottom:4}}>// Zeilen 5–6 anpassen:</div>
         <div><span style={{color:"#4dffaa"}}>SUPABASE_URL</span> = <span style={{color:"#ffc97a"}}>"https://xxx.supabase.co"</span></div>
         <div><span style={{color:"#4dffaa"}}>SUPABASE_ANON_KEY</span> = <span style={{color:"#ffc97a"}}>"eyJ..."</span></div>
       </div>
-      <div style={{fontSize:12,color:"#5a6090",textAlign:"center"}}>Anleitung: <strong style={{color:"#e0e4f8"}}>README.md</strong></div>
+      <div style={{fontSize:12,color:"#8890b8",textAlign:"center"}}>Anleitung: <strong style={{color:"#e0e4f8"}}>README.md</strong></div>
     </div></div>
   );
 }
@@ -504,7 +510,7 @@ function LoginScreen({onLogin}){
       <div style={{textAlign:"center",marginBottom:28}}>
         <div style={{width:54,height:54,background:"linear-gradient(135deg,#4f5de8,#8b5cf6)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 14px"}}>⏱</div>
         <div style={{fontSize:22,fontWeight:700,letterSpacing:"-0.02em"}}>Zeiterfassung</div>
-        <div style={{color:"#5a6090",fontSize:13,marginTop:5}}>Melde dich mit deinen Zugangsdaten an</div>
+        <div style={{color:"#8890b8",fontSize:13,marginTop:5}}>Melde dich mit deinen Zugangsdaten an</div>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div className="field-group"><label className="label">Benutzername</label><input className="input" value={username} onChange={e=>{setUsername(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="z.B. anna" autoFocus autoCapitalize="none" autoCorrect="off"/></div>
@@ -517,10 +523,18 @@ function LoginScreen({onLogin}){
 }
 
 function UserModal({existing,onSave,onClose}){
-  const [form,setForm]=useState(existing?{...existing,password:""}:{name:"",username:"",password:"",role:"employee"});
+  const DAYS=[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"},{v:"6",l:"Sa"},{v:"7",l:"So"}];
+  const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
-  const save=async()=>{if(!form.name.trim()||!form.username.trim()){setErr("Name und Benutzername sind Pflicht.");return;}if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}setSaving(true);try{await onSave({...form,name:form.name.trim(),username:form.username.trim().toLowerCase(),password:form.password.trim()||existing?.password});}catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}};
+  const toggleDay=v=>{const days=(form.work_days||"").split(",").filter(Boolean);const nd=days.includes(v)?days.filter(d=>d!==v):[...days,v].sort();setForm(p=>({...p,work_days:nd.join(",")}));};
+  const save=async()=>{
+    if(!form.name.trim()||!form.username.trim()){setErr("Name und Benutzername sind Pflicht.");return;}
+    if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}
+    setSaving(true);
+    try{await onSave({...form,name:form.name.trim(),username:form.username.trim().toLowerCase(),password:form.password.trim()||existing?.password,daily_hours:form.daily_hours?parseFloat(form.daily_hours):null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25});}
+    catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
+  };
   return(
     <div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal">
       <div style={{fontSize:17,fontWeight:700,marginBottom:20}}>{existing?"Benutzer bearbeiten":"Neuer Benutzer"}</div>
@@ -531,6 +545,23 @@ function UserModal({existing,onSave,onClose}){
           <div className="field-group"><label className="label">Rolle</label><select className="input" value={form.role} onChange={e=>f("role")(e.target.value)}><option value="employee">Mitarbeiter</option><option value="admin">Admin</option></select></div>
         </div>
         <div className="field-group"><label className="label">Passwort {existing?"(leer = unverändert)":"*"}</label><input className="input" type="text" value={form.password} onChange={e=>f("password")(e.target.value)} placeholder={existing?"Neues Passwort…":"Passwort vergeben"}/>{existing&&<div className="pw-hint">Leer lassen = Passwort bleibt.</div>}</div>
+        <div className="field-group"><label className="label">Anstellung</label>
+          <select className="input" value={form.employment_type} onChange={e=>f("employment_type")(e.target.value)}>
+            <option value="hourly">Stundenlohn</option>
+            <option value="salaried">Festangestellt</option>
+          </select>
+        </div>
+        {form.employment_type==="salaried"&&<>
+          <div className="grid-2">
+            <div className="field-group"><label className="label">Sollstunden / Tag</label><input className="input" type="number" min="0" max="24" step="0.5" placeholder="z.B. 8" value={form.daily_hours} onChange={e=>f("daily_hours")(e.target.value)}/></div>
+            <div className="field-group"><label className="label">Ferientage / Jahr</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/></div>
+          </div>
+          <div className="field-group"><label className="label">Arbeitstage</label>
+            <div style={{display:"flex",gap:6,marginTop:4}}>
+              {DAYS.map(d=><div key={d.v} className={`day-chip${(form.work_days||"").split(",").includes(d.v)?" active":""}`} onClick={()=>toggleDay(d.v)}>{d.l}</div>)}
+            </div>
+          </div>
+        </>}
         {err&&<div className="msg-error">{err}</div>}
         <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}><button className="btn btn-ghost" onClick={onClose}>Abbrechen</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Speichern…":"Speichern"}</button></div>
       </div>
@@ -538,7 +569,7 @@ function UserModal({existing,onSave,onClose}){
   );
 }
 
-function EntryModal({existing,projects,activities,products,onSave,onClose}){
+function EntryModal({existing,projects,activities,products,onSave,onClose,swRunning,swSeconds,swTimerId,swStartWith,swPause,swStopClean}){
   const [form,setForm]=useState(existing?{date:existing.date,project:existing.project,activity:existing.activity,product:existing.product||"",hours:String(Math.floor(existing.total_min/60)),minutes:String(existing.total_min%60),note:existing.note||""}:{date:todayStr(),project:"",activity:"",product:"",hours:"",minutes:"",note:""});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const save=async()=>{
@@ -547,6 +578,12 @@ function EntryModal({existing,projects,activities,products,onSave,onClose}){
     if(totalMin<=0){setErr("Zeit muss grösser als 0 sein.");return;}
     setSaving(true);try{await onSave({...form,totalMin});}catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
+  const handleSwStop=async()=>{
+    const elapsed=await swStopClean();
+    const addMin=Math.round(elapsed/60);
+    setForm(f=>{const prev=(parseInt(f.hours)||0)*60+(parseInt(f.minutes)||0);const total=prev+addMin;return{...f,hours:String(Math.floor(total/60)),minutes:String(total%60)};});
+  };
+  const swActive=swRunning||(!swRunning&&swTimerId);
   return(
     <div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal">
       <div style={{fontSize:17,fontWeight:700,marginBottom:20}}>{existing?"Eintrag bearbeiten":"Neuer Eintrag"}</div>
@@ -562,7 +599,21 @@ function EntryModal({existing,projects,activities,products,onSave,onClose}){
             <div className="field-group" style={{flex:1}}><label className="label">Minuten</label><input type="number" min="0" max="59" className="input" placeholder="0" value={form.minutes} onChange={e=>setForm({...form,minutes:e.target.value})} inputMode="numeric"/></div>
           </div>
         </div>
-        <div className="field-group"><label className="label">Produkt <span style={{color:"#5a6090",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label><Autocomplete value={form.product} onChange={v=>setForm(f=>({...f,product:v}))} options={products} placeholder="Produkt suchen…"/></div>
+        {/* Stoppuhr im Modal */}
+        <div style={{background:"rgba(10,12,19,0.6)",border:"1px solid #1e2235",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+          <div className={`stopwatch-display${swRunning?" stopwatch-running":swActive?" stopwatch-paused":""}`} style={{fontSize:28}}>
+            {String(Math.floor(swSeconds/3600)).padStart(2,"0")}:{String(Math.floor((swSeconds%3600)/60)).padStart(2,"0")}:{String(swSeconds%60).padStart(2,"0")}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {!swRunning
+              ? <button className="btn-start" style={{padding:"8px 16px",fontSize:13}} disabled={!form.project||!form.activity} onClick={()=>swStartWith(form.project,form.activity,form.note)}>{swSeconds>0?"▶ Weiter":"▶ Start"}</button>
+              : <><button className="btn-pause" style={{padding:"8px 14px",fontSize:13}} onClick={swPause}>⏸</button>
+                  <button className="btn-stop" style={{padding:"8px 16px",fontSize:13}} onClick={handleSwStop}>⏹ Addieren</button></>
+            }
+          </div>
+          {!form.project&&<span style={{fontSize:11,color:"#8890b8"}}>Zuerst Projekt & Tätigkeit wählen</span>}
+        </div>
+        <div className="field-group"><label className="label">Produkt <span style={{color:"#8890b8",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label><Autocomplete value={form.product} onChange={v=>setForm(f=>({...f,product:v}))} options={products} placeholder="Produkt suchen…"/></div>
         <div className="field-group"><label className="label">Bemerkung</label><textarea className="input" rows={2} placeholder="Optionale Bemerkung…" value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
         {err&&<div className="msg-error">{err}</div>}
         <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}><button className="btn btn-ghost" onClick={onClose}>Abbrechen</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Speichern…":"Speichern"}</button></div>
@@ -678,6 +729,11 @@ export default function App(){
   const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]); const [products,setProducts]=useState([]);
   const [projectBudgets,setProjectBudgets]=useState({}); // {name: budget_hours|null}
   const [archivedProjects,setArchivedProjects]=useState([]); // nur archivierte Namen
+  const [absences,setAbsences]=useState([]);
+  const [holidays,setHolidays]=useState([]);
+  const [holidayYear,setHolidayYear]=useState(new Date().getFullYear());
+  const [absenceForm,setAbsenceForm]=useState({date:todayStr(),type:"frei",note:""});
+  const [absenceSaving,setAbsenceSaving]=useState(false);
   const [dataReady,setDataReady]=useState(false);
   const isAdmin=currentUser?.role==="admin";
 
@@ -729,6 +785,21 @@ export default function App(){
     swRef.current=setInterval(()=>setSwSeconds(s=>s+1),1000);
     return()=>clearInterval(swRef.current);
   },[swRunning]);
+
+  // Tab wird wieder sichtbar → Zeit aus Supabase neu berechnen
+  useEffect(()=>{
+    const onVisible=async()=>{
+      if(document.visibilityState!=="visible"||!swTimerId)return;
+      try{
+        const rows=await sb.select("timers",`?id=eq.${swTimerId}&select=*&limit=1`);
+        if(!rows.length){clearInterval(swRef.current);setSwRunning(false);setSwTimerId(null);setSwSeconds(0);}
+        else if(rows[0].is_paused){setSwSeconds(rows[0].elapsed_seconds||0);setSwRunning(false);}
+        else{const secs=Math.floor((Date.now()-new Date(rows[0].started_at).getTime())/1000);setSwSeconds(secs);}
+      }catch{}
+    };
+    document.addEventListener("visibilitychange",onVisible);
+    return()=>document.removeEventListener("visibilitychange",onVisible);
+  },[swTimerId]);
 
   // Polling: alle 5s prüfen ob Timer noch existiert — auch im Pause-Zustand
   useEffect(()=>{
@@ -810,6 +881,30 @@ export default function App(){
     setSwTimerId(null);
     setSwSeconds(0);
   };
+  // Starten mit expliziten Werten (z.B. aus EntryModal)
+  const swStartWith=async(project,activity,note)=>{
+    if(swRunning)return;
+    if(!project||!activity)return;
+    try{
+      if(swTimerId){
+        await sb.update("timers",swTimerId,{is_paused:false,elapsed_seconds:0,started_at:new Date(Date.now()-swSeconds*1000).toISOString(),project,activity,note:note||null});
+      }else{
+        const rows=await sb.insert("timers",{user_id:currentUser.id,started_at:new Date(Date.now()-swSeconds*1000).toISOString(),project,activity,note:note||null,elapsed_seconds:0,is_paused:false});
+        setSwTimerId(rows[0].id);
+      }
+      setSwRunning(true);
+    }catch(e){alert("Fehler beim Starten: "+e.message);}
+  };
+  // Stoppen ohne inlineForm zu überschreiben (für EntryModal)
+  const swStopClean=async()=>{
+    clearInterval(swRef.current);
+    if(swTimerId){try{await sb.remove("timers",swTimerId);}catch{}}
+    setSwRunning(false);
+    setSwTimerId(null);
+    const elapsed=swSeconds;
+    setSwSeconds(0);
+    return elapsed;
+  };
   const [newProject,setNewProject]=useState(""); const [newActivity,setNewActivity]=useState(""); const [newProduct,setNewProduct]=useState("");
   const [budgetDraft,setBudgetDraft]=useState({}); // {name: string} für Verwaltung-Inputs
   const [editingProject,setEditingProject]=useState(null); // {orig, val}
@@ -826,7 +921,7 @@ export default function App(){
 
   const loadData=useCallback(async()=>{
     if(!isConfigured||!currentUser)return;
-    try{const [u,e,p,a,pr]=await Promise.all([sb.select("users","?select=id,name,username,role,password&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name")]);setUsers(u);setEntries(e);setProjects(p.filter(r=>!r.is_archived).map(r=>r.name));setArchivedProjects(p.filter(r=>r.is_archived).map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));
+    try{const [u,e,p,a,pr,abs,hol]=await Promise.all([sb.select("users","?select=*&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name"),sb.select("absences","?select=*&order=date.desc"),sb.select("holidays","?select=*&order=date.asc")]);setUsers(u);setEntries(e);setProjects(p.filter(r=>!r.is_archived).map(r=>r.name));setArchivedProjects(p.filter(r=>r.is_archived).map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));setAbsences(abs);setHolidays(hol);
       const budgets=Object.fromEntries(p.map(r=>[r.name,r.budget_hours??null]));setProjectBudgets(budgets);setBudgetDraft(Object.fromEntries(p.map(r=>[r.name,r.budget_hours!=null?String(r.budget_hours):""])));}
     catch(err){console.error("Ladefehler:",err);}finally{setDataReady(true);}
   },[currentUser,isConfigured]);
@@ -921,8 +1016,70 @@ export default function App(){
   const removeActivity=async(name)=>{try{const r=await sb.select("activities",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("activities",r[0].id);setActivities(prev=>prev.filter(a=>a!==name));}catch(e){alert("Fehler: "+e.message);}};
   const addProduct=async()=>{if(!newProduct.trim())return;try{await sb.insert("products",{name:newProduct.trim()});setProducts(prev=>[...prev,newProduct.trim()].sort());setNewProduct("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProduct=async(name)=>{try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
-  const saveUser=async(data)=>{if(userModal&&userModal!=="new"){const updated=await sb.update("users",userModal.id,{name:data.name,username:data.username,role:data.role,password:data.password||userModal.password});setUsers(prev=>prev.map(u=>u.id===userModal.id?updated[0]:u));if(currentUser.id===userModal.id){const f=updated[0];setCurrentUser(f);try{sessionStorage.setItem("ze_session",JSON.stringify(f));}catch{}}}else{const c=await sb.insert("users",data);setUsers(prev=>[...prev,c[0]]);}setUserModal(null);};
+  const saveUser=async(data)=>{if(userModal&&userModal!=="new"){const updated=await sb.update("users",userModal.id,{name:data.name,username:data.username,role:data.role,password:data.password||userModal.password,employment_type:data.employment_type||"hourly",daily_hours:data.daily_hours??null,work_days:data.work_days||"1,2,3,4,5",vacation_days_per_year:data.vacation_days_per_year||25});setUsers(prev=>prev.map(u=>u.id===userModal.id?updated[0]:u));if(currentUser.id===userModal.id){const f=updated[0];setCurrentUser(f);try{sessionStorage.setItem("ze_session",JSON.stringify(f));}catch{}}}else{const c=await sb.insert("users",data);setUsers(prev=>[...prev,c[0]]);}setUserModal(null);};
   const deleteUser=async(id)=>{if(id===currentUser.id||!window.confirm("Benutzer löschen?"))return;try{await sb.remove("users",id);setUsers(prev=>prev.filter(u=>u.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+
+  const fetchHolidays=async(year)=>{
+    try{
+      const url=`https://openholidaysapi.org/PublicHolidays?countryIsoCode=CH&subdivisionCode=CH-LU&validFrom=${year}-01-01&validTo=${year}-12-31&languageIsoCode=DE`;
+      const r=await fetch(url);if(!r.ok)throw new Error("API nicht erreichbar");
+      const data=await r.json();
+      const existing=holidays.filter(h=>h.year===year);
+      await Promise.all(existing.map(h=>sb.remove("holidays",h.id)));
+      const inserted=await Promise.all(data.map(h=>sb.insert("holidays",{date:h.startDate,name:h.name.find(n=>n.language==="DE")?.text||h.name[0]?.text||"Feiertag",year})));
+      setHolidays(prev=>[...prev.filter(h=>h.year!==year),...inserted.map(i=>i[0])]);
+    }catch(e){alert("Fehler beim Laden der Feiertage: "+e.message);}
+  };
+  const addHoliday=async(date,name,year)=>{
+    try{const r=await sb.insert("holidays",{date,name,year});setHolidays(prev=>[...prev,r[0]].sort((a,b)=>a.date.localeCompare(b.date)));}catch(e){alert("Fehler: "+e.message);}
+  };
+  const deleteHoliday=async(id)=>{try{await sb.remove("holidays",id);setHolidays(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+  const addAbsence=async()=>{
+    if(!absenceForm.date)return;
+    setAbsenceSaving(true);
+    try{const r=await sb.insert("absences",{user_id:currentUser.id,date:absenceForm.date,type:absenceForm.type,note:absenceForm.note||null});setAbsences(prev=>[r[0],...prev]);setAbsenceForm({date:todayStr(),type:"frei",note:""});}
+    catch(e){alert("Fehler: "+e.message);}finally{setAbsenceSaving(false);}
+  };
+  const addAbsenceForUser=async(userId,date,type,note)=>{
+    try{const r=await sb.insert("absences",{user_id:userId,date,type,note:note||null});setAbsences(prev=>[r[0],...prev]);}catch(e){alert("Fehler: "+e.message);}
+  };
+  const deleteAbsence=async(id)=>{try{await sb.remove("absences",id);setAbsences(prev=>prev.filter(a=>a.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+
+  // ─── Arbeitszeit-Helpers ───────────────────────────────────────────────────
+  const parseWorkDays=wd=>(wd||"1,2,3,4,5").split(",").map(Number);
+  const calcVacBalance=useCallback((userId)=>{
+    const user=users.find(u=>u.id===userId);
+    if(!user||user.employment_type!=="salaried")return null;
+    const wd=parseWorkDays(user.work_days);
+    const curYear=new Date().getFullYear();
+    const allDates=[...entries.filter(e=>e.employee_id===userId).map(e=>e.date),...absences.filter(a=>a.user_id===userId).map(a=>a.date)];
+    const minYear=allDates.length>0?Math.min(...allDates.map(d=>parseInt(d.substring(0,4)))):curYear;
+    let totalDays=0;
+    for(let y=minYear;y<=curYear;y++){
+      totalDays+=parseFloat(user.vacation_days_per_year||25);
+      holidays.filter(h=>h.year===y).forEach(h=>{const dow=(new Date(h.date).getDay())||7;if(wd.includes(dow))totalDays++;});
+    }
+    const usedFrei=absences.filter(a=>a.user_id===userId&&a.type==="frei").length;
+    const sickDays=absences.filter(a=>a.user_id===userId&&a.type==="krank").length;
+    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).filter(h=>{const dow=(new Date(h.date).getDay())||7;return wd.includes(dow);}).length;
+    return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear:parseFloat(user.vacation_days_per_year||25)};
+  },[users,absences,holidays,entries]);
+
+  const calcSollIst=useCallback((userId,month,year)=>{
+    const user=users.find(u=>u.id===userId);
+    if(!user||user.employment_type!=="salaried"||!user.daily_hours)return null;
+    const wd=parseWorkDays(user.work_days);
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    let workDays=0;
+    for(let d=1;d<=daysInMonth;d++){const dow=(new Date(year,month,d).getDay())||7;if(wd.includes(dow))workDays++;}
+    const monthStr=`${year}-${String(month+1).padStart(2,"0")}`;
+    const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)).length;
+    const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)).length;
+    const sollMin=(workDays-freiInMonth)*user.daily_hours*60;
+    const istEntries=entries.filter(e=>e.employee_id===userId&&e.date.startsWith(monthStr)).reduce((s,e)=>s+e.total_min,0);
+    const istMin=istEntries+(krankInMonth*user.daily_hours*60);
+    return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth};
+  },[users,absences,entries]);
 
   const myEntries=useMemo(()=>entries.filter(e=>e.employee_id===currentUser?.id),[entries,currentUser]);
   const dayTotal=useMemo(()=>myEntries.filter(e=>e.date===inlineForm.date).reduce((s,e)=>s+e.total_min,0),[myEntries,inlineForm.date]);
@@ -951,13 +1108,13 @@ export default function App(){
 
   if(!isConfigured)return <><style>{CSS}</style><ConfigScreen/></>;
   if(!currentUser) return <><style>{CSS}</style><LoginScreen onLogin={login}/></>;
-  if(!dataReady)   return <div className="loading"><style>{CSS}</style><div className="spinner"/><div style={{color:"#5a6090",fontSize:13}}>Daten werden geladen…</div></div>;
+  if(!dataReady)   return <div className="loading"><style>{CSS}</style><div className="spinner"/><div style={{color:"#8890b8",fontSize:13}}>Daten werden geladen…</div></div>;
 
   return(
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
       {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)}/>}
-      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)}/>}
+      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStartWith={swStartWith} swPause={swPause} swStopClean={swStopClean}/>}
       {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
         <ProjektAuswahlModal
@@ -991,13 +1148,13 @@ export default function App(){
                 <span className={isAdmin?"badge-admin":"badge-emp"} style={{fontSize:10}}>{isAdmin?"Admin":"Mitarbeiter"}</span>
               </div>
               <div className="avatar" style={{width:32,height:32,fontSize:12}}>{initials(currentUser.name)}</div>
-              <span style={{color:"#5a6090",fontSize:11}}>▾</span>
+              <span style={{color:"#8890b8",fontSize:11}}>▾</span>
             </div>
             {dropdownOpen&&(
               <div className="dropdown-menu">
                 <div style={{padding:"8px 12px 6px",borderBottom:"1px solid #2a2e48",marginBottom:4}}>
                   <div style={{fontSize:13,fontWeight:600,color:"#e0e4f8"}}>{currentUser.name}</div>
-                  <div style={{fontSize:11,color:"#5a6090"}}>@{currentUser.username}</div>
+                  <div style={{fontSize:11,color:"#8890b8"}}>@{currentUser.username}</div>
                 </div>
                 <button className="dropdown-item" onMouseDown={()=>{setDropdownOpen(false);setPwModal(true);}}>🔑 Passwort ändern</button>
                 <div className="dropdown-divider"/>
@@ -1019,7 +1176,7 @@ export default function App(){
           <div>
             <div style={{marginBottom:16}}>
               <h1 style={{fontSize:21,fontWeight:700}}>Zeiteintrag erfassen</h1>
-              <p style={{color:"#5a6090",fontSize:13,marginTop:4}}>Erfassung als: <strong style={{color:"#7c8bff"}}>{currentUser.name}</strong></p>
+              <p style={{color:"#8890b8",fontSize:13,marginTop:4}}>Erfassung als: <strong style={{color:"#7c8bff"}}>{currentUser.name}</strong></p>
             </div>
 
             {/* Inline-Erfassungsformular */}
@@ -1032,10 +1189,10 @@ export default function App(){
                     <input type="date" className="input" value={inlineForm.date} onChange={e=>setInlineForm(f=>({...f,date:e.target.value}))}/>
                   </div>
                   <div style={{flex:"1 1 180px"}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#5a6090",letterSpacing:".07em",textTransform:"uppercase",marginBottom:4}}>Tagestotal</div>
+                    <div style={{fontSize:11,fontWeight:700,color:"#8890b8",letterSpacing:".07em",textTransform:"uppercase",marginBottom:4}}>Tagestotal</div>
                     <div style={{display:"flex",alignItems:"baseline",gap:8}}>
                       <span style={{fontFamily:"'DM Mono',monospace",fontSize:24,fontWeight:500,color:dayTotal>0?"#4dffaa":"#2a2e48"}}>{fmtTime(dayTotal)}</span>
-                      {dayTotal>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"#5a6090"}}>{fmtDecimal(dayTotal)} h</span>}
+                      {dayTotal>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"#8890b8"}}>{fmtDecimal(dayTotal)} h</span>}
                     </div>
                   </div>
                 </div>
@@ -1051,7 +1208,7 @@ export default function App(){
                   </div>
                 </div>
                 <div className="field-group">
-                  <label className="label">Produkt <span style={{color:"#5a6090",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
+                  <label className="label">Produkt <span style={{color:"#8890b8",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
                   <Autocomplete value={inlineForm.product} onChange={v=>setInlineForm(f=>({...f,product:v}))} options={products} placeholder="Produkt suchen…"/>
                 </div>
                 {/* Zeile 3: Zeit (manuell oder Stoppuhr) + Bemerkung */}
@@ -1070,7 +1227,7 @@ export default function App(){
                         {swSeconds>0&&!swRunning&&<button className="btn btn-ghost" style={{padding:"8px 14px",fontSize:13}} onClick={swReset}>↺ Reset</button>}
                       </div>
                       {!swRunning&&swTimerId&&swSeconds>0&&<div style={{fontSize:11,color:"#ffbe32"}}>⏸ Pausiert — auch auf anderen Geräten gespeichert</div>}
-                      {!inlineForm.project&&<div style={{fontSize:11,color:"#5a6090"}}>Zuerst Projekt & Tätigkeit wählen</div>}
+                      {!inlineForm.project&&<div style={{fontSize:11,color:"#8890b8"}}>Zuerst Projekt & Tätigkeit wählen</div>}
                     </div>
                     {/* Manuelle Eingabe */}
                     <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
@@ -1098,7 +1255,7 @@ export default function App(){
             </div>
 
             {/* Letzte Einträge */}
-            <h2 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#7880a8",letterSpacing:".05em",textTransform:"uppercase"}}>Meine letzten Einträge</h2>
+            <h2 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#9aa2c8",letterSpacing:".05em",textTransform:"uppercase"}}>Meine letzten Einträge</h2>
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <div className="table-wrap"><table>
                 <thead><tr><th>Datum</th><th>Projekt</th><th>Tätigkeit</th><th>Zeit</th><th className="hide-mobile">Bemerkung</th><th style={{textAlign:"right"}}>Aktionen</th></tr></thead>
@@ -1107,16 +1264,67 @@ export default function App(){
                     <tr key={e.id}>
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{e.date}</td>
                       <td><span className="chip chip-blue">{e.project}</span></td>
-                      <td style={{color:"#7880a8"}}>{e.activity}</td>
+                      <td style={{color:"#9aa2c8"}}>{e.activity}</td>
                       <td><span className="chip">{fmtTime(e.total_min)}</span></td>
-                      <td className="hide-mobile" style={{color:"#5a6090",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note||"—"}</td>
+                      <td className="hide-mobile" style={{color:"#8890b8",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note||"—"}</td>
                       <td><div className="action-btns" style={{justifyContent:"flex-end"}}><button className="btn-edit" onClick={()=>setEntryModal(e)}>✎</button><button className="btn-danger" onClick={()=>deleteEntry(e.id)}>✕</button></div></td>
                     </tr>
                   ))}
-                  {myEntries.length===0&&<tr><td colSpan={6} style={{textAlign:"center",color:"#5a6090",padding:"32px 0"}}>Noch keine Einträge.</td></tr>}
+                  {myEntries.length===0&&<tr><td colSpan={6} style={{textAlign:"center",color:"#8890b8",padding:"32px 0"}}>Noch keine Einträge.</td></tr>}
                 </tbody>
               </table></div>
             </div>
+
+            {/* Abwesenheiten */}
+            {(()=>{
+              const myUser=users.find(u=>u.id===currentUser?.id);
+              const isSalaried=myUser?.employment_type==="salaried";
+              const myAbsences=absences.filter(a=>a.user_id===currentUser?.id).slice(0,20);
+              const bal=isSalaried?calcVacBalance(currentUser?.id):null;
+              return(<>
+                <h2 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#9aa2c8",letterSpacing:".05em",textTransform:"uppercase",marginTop:24}}>Abwesenheiten</h2>
+                {isSalaried&&bal&&(
+                  <div className="balance-box" style={{marginBottom:16}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#9aa2c8",letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Ferienguthaben (rollend)</div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch total (kumuliert)</span><strong>{bal.total} Tage</strong></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Davon Ferientage/Jahr</span><span>{bal.vacPerYear} Tage × {new Date().getFullYear()-Math.max(0,new Date().getFullYear()-1)+1} Jahr(e)</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Feiertage {new Date().getFullYear()} (auf Arbeitstagen)</span><span>{bal.holidayDaysThisYear} Tage</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen (Frei)</span><span style={{color:"#ff6b85"}}>−{bal.used} Tage</span></div>
+                    <div style={{borderTop:"1px solid rgba(79,93,232,0.2)",paddingTop:8,marginTop:4}} className="balance-row">
+                      <span style={{fontWeight:700}}>Verbleibend</span>
+                      <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa",fontSize:16}}>{bal.remaining} Tage</strong>
+                    </div>
+                    {bal.sick>0&&<div className="balance-row"><span style={{color:"#8890b8"}}>Kranktage total</span><span>{bal.sick} Tage</span></div>}
+                  </div>
+                )}
+                <div className="card" style={{marginBottom:12}}>
+                  <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+                    <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Datum</label><input type="date" className="input" value={absenceForm.date} onChange={e=>setAbsenceForm(f=>({...f,date:e.target.value}))}/></div>
+                    <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Typ</label>
+                      <select className="input" value={absenceForm.type} onChange={e=>setAbsenceForm(f=>({...f,type:e.target.value}))}>
+                        <option value="frei">Frei (Ferien/Feiertag)</option>
+                        <option value="krank">Krank</option>
+                      </select>
+                    </div>
+                    <div className="field-group" style={{flex:"2 1 160px"}}><label className="label">Bemerkung</label><input className="input" placeholder="Optional…" value={absenceForm.note} onChange={e=>setAbsenceForm(f=>({...f,note:e.target.value}))}/></div>
+                    <button className="btn btn-primary" style={{flexShrink:0,padding:"11px 20px"}} onClick={addAbsence} disabled={absenceSaving}>{absenceSaving?"…":"+ Erfassen"}</button>
+                  </div>
+                </div>
+                {myAbsences.length>0&&<div className="card" style={{padding:0,overflow:"hidden"}}>
+                  <div className="table-wrap"><table>
+                    <thead><tr><th>Datum</th><th>Typ</th><th className="hide-mobile">Bemerkung</th><th style={{textAlign:"right"}}></th></tr></thead>
+                    <tbody>{myAbsences.map(a=>(
+                      <tr key={a.id}>
+                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{a.date}</td>
+                        <td><span className={a.type==="frei"?"badge-frei":"badge-krank"}>{a.type==="frei"?"Frei":"Krank"}</span></td>
+                        <td className="hide-mobile" style={{color:"#8890b8"}}>{a.note||"—"}</td>
+                        <td style={{textAlign:"right"}}><button className="btn-danger" onClick={()=>deleteAbsence(a.id)}>✕</button></td>
+                      </tr>
+                    ))}</tbody>
+                  </table></div>
+                </div>}
+              </>);
+            })()}
           </div>
         )}
 
@@ -1130,7 +1338,7 @@ export default function App(){
                 <button className="btn-excel" onClick={()=>exportAuswertungExcel({filteredEntries,projectStats,activityStats,fromMonth,fromYear,toMonth,toYear,isAdmin})}>⬇ Auswertung</button>
               </div>
             </div>
-            <p style={{color:"#5a6090",fontSize:13,marginBottom:18}}>{isAdmin?"Alle Mitarbeiter":"Deine persönliche Übersicht"}</p>
+            <p style={{color:"#8890b8",fontSize:13,marginBottom:18}}>{isAdmin?"Alle Mitarbeiter":"Deine persönliche Übersicht"}</p>
 
             <div className="card" style={{marginBottom:16}}>
               <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
@@ -1150,12 +1358,12 @@ export default function App(){
 
             <div className="grid-3" style={{marginBottom:16}}>
               {[["Gesamtzeit",fmtTime(totalFiltered)],["Einträge",filteredEntries.length],["Projekte",projectStats.length]].map(([label,val])=>(
-                <div key={label} className="summary-box"><div style={{color:"#5a6090",fontSize:10,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>{label}</div><div className="big-num">{val}</div></div>
+                <div key={label} className="summary-box"><div style={{color:"#8890b8",fontSize:10,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>{label}</div><div className="big-num">{val}</div></div>
               ))}
             </div>
             <div className="grid-2" style={{marginBottom:16}}>
               <div className="card"><div className="section-title">Nach Projekt</div>
-                {projectStats.length===0&&<div style={{color:"#5a6090",fontSize:13}}>Keine Daten</div>}
+                {projectStats.length===0&&<div style={{color:"#8890b8",fontSize:13}}>Keine Daten</div>}
                 {projectStats.map(([name,min])=>{
                   const budgetH=projectBudgets[name];
                   const budgetMin=budgetH?budgetH*60:null;
@@ -1172,18 +1380,52 @@ export default function App(){
                       </div>}
                     </div>
                     <div style={{minWidth:65,textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>
-                      {fmtTime(min)}{budgetH&&<span style={{fontSize:10,color:"#5a6090",fontFamily:"'DM Sans',sans-serif"}}> / {budgetH}h</span>}
+                      {fmtTime(min)}{budgetH&&<span style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif"}}> / {budgetH}h</span>}
                     </div>
                   </div>);
                 })}
               </div>
               <div className="card"><div className="section-title">Nach Tätigkeit</div>
-                {activityStats.length===0&&<div style={{color:"#5a6090",fontSize:13}}>Keine Daten</div>}
+                {activityStats.length===0&&<div style={{color:"#8890b8",fontSize:13}}>Keine Daten</div>}
                 {activityStats.map(([name,min])=>(
                   <div key={name} className="stat-row"><div style={{minWidth:90,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div><div className="bar-bg"><div className="bar-fill bar-fill-green" style={{width:`${(min/maxAct)*100}%`}}/></div><div style={{minWidth:65,textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#4dffaa"}}>{fmtTime(min)}</div></div>
                 ))}
               </div>
             </div>
+            {/* Ferienguthaben-Übersicht für Festangestellte */}
+            {(()=>{
+              const salariedUsers=users.filter(u=>u.employment_type==="salaried"&&u.role!=="admin");
+              if(!salariedUsers.length)return null;
+              const relevant=isAdmin?(filterEmployee==="alle"?salariedUsers:salariedUsers.filter(u=>u.name===filterEmployee)):salariedUsers.filter(u=>u.id===currentUser?.id);
+              if(!relevant.length)return null;
+              return(
+                <div className="card" style={{marginBottom:16}}>
+                  <div className="section-title">Ferienguthaben Festangestellte</div>
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <thead><tr style={{fontSize:11,color:"#8890b8",textTransform:"uppercase",letterSpacing:".06em"}}>
+                        <th style={{textAlign:"left",padding:"6px 8px",fontWeight:700}}>Mitarbeiter</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Anspruch</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Verbleibend</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Kranktage</th>
+                      </tr></thead>
+                      <tbody>{relevant.map(u=>{
+                        const bal=calcVacBalance(u.id);
+                        if(!bal)return null;
+                        return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
+                          <td style={{padding:"8px 8px",fontSize:13,fontWeight:500}}>{u.name}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{bal.total} T</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal.used} T</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining} T</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal.sick}</td>
+                        </tr>);
+                      })}</tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <div style={{padding:"14px 20px",borderBottom:"1px solid #1e2235"}}><span className="section-title" style={{marginBottom:0}}>Einträge ({filteredEntries.length})</span></div>
               <div className="table-wrap"><table>
@@ -1194,12 +1436,12 @@ export default function App(){
                       <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{e.date}</td>
                       {isAdmin&&<td style={{fontWeight:500}}>{e.employee_name}</td>}
                       <td><span className="chip chip-blue">{e.project}</span></td>
-                      <td style={{color:"#7880a8"}}>{e.activity}</td>
+                      <td style={{color:"#9aa2c8"}}>{e.activity}</td>
                       <td><span className="chip">{fmtTime(e.total_min)}</span></td>
-                      <td className="hide-mobile" style={{color:"#5a6090"}}>{e.note||"—"}</td>
+                      <td className="hide-mobile" style={{color:"#8890b8"}}>{e.note||"—"}</td>
                     </tr>
                   ))}
-                  {filteredEntries.length===0&&<tr><td colSpan={7} style={{textAlign:"center",color:"#5a6090",padding:"28px 0"}}>Keine Einträge für diesen Zeitraum.</td></tr>}
+                  {filteredEntries.length===0&&<tr><td colSpan={7} style={{textAlign:"center",color:"#8890b8",padding:"28px 0"}}>Keine Einträge für diesen Zeitraum.</td></tr>}
                 </tbody>
               </table></div>
             </div>
@@ -1213,30 +1455,47 @@ export default function App(){
               <h1 style={{fontSize:21,fontWeight:700}}>Monatsabschluss</h1>
               <button className="btn-excel3" onClick={()=>exportMonatsabschlussExcel({abschlussPerEmp,abschlussMonth,abschlussYear})}>⬇ Stundenblätter (A4)</button>
             </div>
-            <p style={{color:"#5a6090",fontSize:13,marginBottom:22}}>Stundenzusammenfassung für die Lohnabrechnung.</p>
+            <p style={{color:"#8890b8",fontSize:13,marginBottom:22}}>Stundenzusammenfassung für die Lohnabrechnung.</p>
             <div className="card" style={{marginBottom:16}}><div style={{display:"flex",gap:10}}>
               <select className="input" style={{width:"auto",flex:1}} value={abschlussMonth} onChange={e=>setAbschlussMonth(+e.target.value)}>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
               <select className="input" style={{width:"auto"}} value={abschlussYear} onChange={e=>setAbschlussYear(+e.target.value)}>{years.map(y=><option key={y}>{y}</option>)}</select>
             </div></div>
-            <div style={{fontSize:13,color:"#5a6090",marginBottom:16}}>{MONTHS[abschlussMonth]} {abschlussYear} — {abschlussEntries.length} Einträge, Total: <strong style={{color:"#e0e4f8"}}>{fmtTime(abschlussEntries.reduce((s,e)=>s+e.total_min,0))}</strong></div>
+            <div style={{fontSize:13,color:"#8890b8",marginBottom:16}}>{MONTHS[abschlussMonth]} {abschlussYear} — {abschlussEntries.length} Einträge, Total: <strong style={{color:"#e0e4f8"}}>{fmtTime(abschlussEntries.reduce((s,e)=>s+e.total_min,0))}</strong></div>
             {abschlussPerEmp.map(({name,totalMin,entries:empE})=>(
               <div key={name} className="abschluss-card">
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
                     <div className="avatar">{initials(name)}</div>
-                    <div><div style={{fontWeight:600,fontSize:15}}>{name}</div><div style={{color:"#5a6090",fontSize:12,marginTop:2}}>{empE.length} Einträge</div></div>
+                    <div><div style={{fontWeight:600,fontSize:15}}>{name}</div><div style={{color:"#8890b8",fontSize:12,marginTop:2}}>{empE.length} Einträge</div></div>
                   </div>
-                  <div style={{textAlign:"right"}}><div className="big-num" style={{fontSize:20}}>{fmtTime(totalMin)}</div><div style={{color:"#7c8bff",fontSize:12,fontFamily:"'DM Mono',monospace"}}>{fmtDecimal(totalMin)} h</div></div>
+                  <div style={{textAlign:"right"}}>
+                    <div className="big-num" style={{fontSize:20}}>{fmtTime(totalMin)}</div>
+                    <div style={{color:"#7c8bff",fontSize:12,fontFamily:"'DM Mono',monospace"}}>{fmtDecimal(totalMin)} h</div>
+                    {(()=>{const empUser=users.find(u=>u.name===name);if(!empUser)return null;const si=calcSollIst(empUser.id,abschlussMonth,abschlussYear);if(!si)return null;const diffColor=si.diff>=0?"#4dffaa":"#ff6b85";return(<div style={{marginTop:6,fontSize:11,color:"#8890b8"}}>Soll: {fmtTime(si.sollMin)} · Ist: {fmtTime(si.istMin)} · <span style={{color:diffColor,fontWeight:700}}>{si.diff>=0?"+":""}{fmtTime(Math.abs(si.diff))}</span></div>);})()}
+                  </div>
                 </div>
                 <div className="table-wrap"><table>
                   <thead><tr><th>Datum</th><th>Projekt</th><th>Tätigkeit</th><th>Zeit</th><th className="hide-mobile">Bemerkung</th></tr></thead>
                   <tbody>{empE.map(e=>(
-                    <tr key={e.id}><td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{e.date}</td><td><span className="chip chip-blue">{e.project}</span></td><td style={{color:"#7880a8"}}>{e.activity}</td><td><span className="chip">{fmtTime(e.total_min)}</span></td><td className="hide-mobile" style={{color:"#5a6090"}}>{e.note||"—"}</td></tr>
+                    <tr key={e.id}><td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{e.date}</td><td><span className="chip chip-blue">{e.project}</span></td><td style={{color:"#9aa2c8"}}>{e.activity}</td><td><span className="chip">{fmtTime(e.total_min)}</span></td><td className="hide-mobile" style={{color:"#8890b8"}}>{e.note||"—"}</td></tr>
                   ))}</tbody>
                 </table></div>
+                {(()=>{
+                  const empUser=users.find(u=>u.name===name);
+                  if(!empUser||empUser.employment_type!=="salaried")return null;
+                  const bal=calcVacBalance(empUser.id);
+                  const monthAbsences=absences.filter(a=>a.user_id===empUser.id&&a.date.startsWith(`${abschlussYear}-${String(abschlussMonth+1).padStart(2,"0")}`));
+                  if(!bal)return null;
+                  return(
+                    <div style={{padding:"12px 16px",borderTop:"1px solid #1e2235",display:"flex",gap:24,flexWrap:"wrap"}}>
+                      <div style={{fontSize:12,color:"#8890b8"}}>Ferienguthaben: <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining} Tage verbleibend</strong> ({bal.used}/{bal.total} bezogen)</div>
+                      {monthAbsences.length>0&&<div style={{fontSize:12,color:"#8890b8"}}>Abwesenheiten {MONTHS[abschlussMonth]}: {monthAbsences.filter(a=>a.type==="frei").length} Frei, {monthAbsences.filter(a=>a.type==="krank").length} Krank</div>}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
-            {abschlussPerEmp.length===0&&<div style={{textAlign:"center",color:"#5a6090",padding:"48px 0"}}>Keine Einträge für {MONTHS[abschlussMonth]} {abschlussYear}.</div>}
+            {abschlussPerEmp.length===0&&<div style={{textAlign:"center",color:"#8890b8",padding:"48px 0"}}>Keine Einträge für {MONTHS[abschlussMonth]} {abschlussYear}.</div>}
           </div>
         )}
 
@@ -1244,7 +1503,7 @@ export default function App(){
         {view==="verwaltung"&&isAdmin&&(
           <div>
             <h1 style={{fontSize:21,fontWeight:700,marginBottom:5}}>Verwaltung</h1>
-            <p style={{color:"#5a6090",fontSize:13,marginBottom:22}}>Benutzer, Projekte und Tätigkeiten zentral verwalten.</p>
+            <p style={{color:"#8890b8",fontSize:13,marginBottom:22}}>Benutzer, Projekte und Tätigkeiten zentral verwalten.</p>
             <div style={{display:"flex",flexDirection:"column",gap:18}}>
               <div className="card">
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -1255,7 +1514,7 @@ export default function App(){
                   <div key={u.id} className="user-row">
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <div className="avatar">{initials(u.name)}</div>
-                      <div><div style={{fontSize:14,fontWeight:600}}>{u.name}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"#5a6090"}}>@{u.username}</div></div>
+                      <div><div style={{fontSize:14,fontWeight:600}}>{u.name}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"#8890b8"}}>@{u.username}</div></div>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
                       <span className={u.role==="admin"?"badge-admin":"badge-emp"}>{u.role==="admin"?"Admin":"Mitarbeiter"}</span>
@@ -1288,17 +1547,17 @@ export default function App(){
                           onBlur={()=>saveBudget(p)}
                           onKeyDown={e=>e.key==="Enter"&&saveBudget(p)}
                         />
-                        <span style={{fontSize:11,color:"#5a6090",whiteSpace:"nowrap"}}>h Budget</span>
+                        <span style={{fontSize:11,color:"#8890b8",whiteSpace:"nowrap"}}>h Budget</span>
                       </div>
                       <button className="btn-warn" onClick={()=>archiveProject(p)}>⬇ Archivieren</button>
                       <button className="btn-danger" onClick={()=>removeProject(p)}>✕ Entfernen</button>
                     </div>
                   ))}
-                  {projects.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Projekte.</div>}
+                  {projects.length===0&&<div style={{color:"#8890b8",fontSize:13,padding:"8px 0"}}>Noch keine Projekte.</div>}
                 </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neues Projekt…" value={newProject} onChange={e=>setNewProject(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addProject()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addProject}>+</button></div>
                 {archivedProjects.length>0&&<>
-                  <div style={{fontSize:11,fontWeight:700,color:"#5a6090",letterSpacing:".07em",textTransform:"uppercase",marginTop:20,marginBottom:8}}>Archiviert</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#8890b8",letterSpacing:".07em",textTransform:"uppercase",marginTop:20,marginBottom:8}}>Archiviert</div>
                   {archivedProjects.map(p=>(
                     <div key={p} className="mgmt-list-item" style={{opacity:0.6}}>
                       <span style={{fontSize:14,flex:1,textDecoration:"line-through"}}>{p}</span>
@@ -1323,7 +1582,7 @@ export default function App(){
                       <button className="btn-danger" onClick={()=>removeActivity(a)}>✕ Entfernen</button>
                     </div>
                   ))}
-                  {activities.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Tätigkeiten.</div>}
+                  {activities.length===0&&<div style={{color:"#8890b8",fontSize:13,padding:"8px 0"}}>Noch keine Tätigkeiten.</div>}
                 </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neue Tätigkeit…" value={newActivity} onChange={e=>setNewActivity(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addActivity()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addActivity}>+</button></div>
               </div>
@@ -1343,9 +1602,42 @@ export default function App(){
                       <button className="btn-danger" onClick={()=>removeProduct(p)}>✕ Entfernen</button>
                     </div>
                   ))}
-                  {products.length===0&&<div style={{color:"#5a6090",fontSize:13,padding:"8px 0"}}>Noch keine Produkte.</div>}
+                  {products.length===0&&<div style={{color:"#8890b8",fontSize:13,padding:"8px 0"}}>Noch keine Produkte.</div>}
                 </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neues Produkt…" value={newProduct} onChange={e=>setNewProduct(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addProduct()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addProduct}>+</button></div>
+              </div>
+
+              {/* Feiertage */}
+              <div className="card">
+                <div className="section-title">Feiertage Luzern</div>
+                <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
+                  <select className="input" style={{width:"auto"}} value={holidayYear} onChange={e=>setHolidayYear(+e.target.value)}>
+                    {[...Array(5)].map((_,i)=>{const y=new Date().getFullYear()-1+i;return<option key={y} value={y}>{y}</option>;})}
+                  </select>
+                  <button className="btn btn-primary" style={{padding:"9px 16px",fontSize:13}} onClick={()=>fetchHolidays(holidayYear)}>↻ Feiertage laden</button>
+                  <span style={{fontSize:12,color:"#8890b8"}}>{holidays.filter(h=>h.year===holidayYear).length} Einträge für {holidayYear}</span>
+                </div>
+                <div style={{marginBottom:16}}>
+                  {holidays.filter(h=>h.year===holidayYear).map(h=>(
+                    <div key={h.id} className="mgmt-list-item">
+                      <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8",minWidth:90}}>{h.date}</span>
+                      <span style={{fontSize:14,flex:1}}>{h.name}</span>
+                      <button className="btn-danger" onClick={()=>deleteHoliday(h.id)}>✕</button>
+                    </div>
+                  ))}
+                  {holidays.filter(h=>h.year===holidayYear).length===0&&<div style={{color:"#8890b8",fontSize:13,padding:"8px 0"}}>Keine Feiertage für {holidayYear} — "Feiertage laden" klicken.</div>}
+                </div>
+                {/* Manuell hinzufügen */}
+                {(()=>{
+                  const [hDate,setHDate]=React.useState("");const [hName,setHName]=React.useState("");
+                  return(
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      <input type="date" className="input" style={{flex:"1 1 130px"}} value={hDate} onChange={e=>setHDate(e.target.value)}/>
+                      <input className="input" placeholder="Name…" style={{flex:"2 1 160px"}} value={hName} onChange={e=>setHName(e.target.value)}/>
+                      <button className="btn btn-ghost" style={{flexShrink:0}} onClick={()=>{if(hDate&&hName){addHoliday(hDate,hName,holidayYear);setHDate("");setHName("");}}}>+ Manuell</button>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
