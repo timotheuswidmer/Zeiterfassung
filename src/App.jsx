@@ -524,7 +524,7 @@ function LoginScreen({onLogin}){
 
 function UserModal({existing,onSave,onClose,holidays}){
   const DAYS=[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"},{v:"6",l:"Sa"},{v:"7",l:"So"}];
-  const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
+  const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",annual_hours:existing.annual_hours!=null?String(existing.annual_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",annual_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
   const toggleDay=v=>{const days=(form.work_days||"").split(",").filter(Boolean);const nd=days.includes(v)?days.filter(d=>d!==v):[...days,v].sort();setForm(p=>({...p,work_days:nd.join(",")}));};
@@ -551,19 +551,11 @@ function UserModal({existing,onSave,onClose,holidays}){
     else setForm(p=>({...p,annual_hours:v,daily_hours:""}));
   };
 
-  // Initialisiere annual_hours aus daily_hours
-  const [annualHours,setAnnualHours]=useState(()=>{
-    if(existing?.daily_hours){const wd2=calcWorkdaysInYear();return String(Math.round(existing.daily_hours*wd2*10)/10);}
-    return "";
-  });
-  // Sync annual_hours in form state
-  const formAnnualHours=form.annual_hours??annualHours;
-
   const save=async()=>{
     if(!form.name.trim()||!form.username.trim()){setErr("Name und Benutzername sind Pflicht.");return;}
     if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}
     setSaving(true);
-    try{await onSave({...form,name:form.name.trim(),username:form.username.trim().toLowerCase(),password:form.password.trim()||existing?.password,daily_hours:form.daily_hours?parseFloat(form.daily_hours):null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25});}
+    try{await onSave({...form,name:form.name.trim(),username:form.username.trim().toLowerCase(),password:form.password.trim()||existing?.password,daily_hours:form.daily_hours?parseFloat(form.daily_hours):null,annual_hours:form.annual_hours?parseFloat(form.annual_hours):null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25});}
     catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
   return(
@@ -590,7 +582,7 @@ function UserModal({existing,onSave,onClose,holidays}){
             <div className="pw-hint">{calcWorkdaysInYear()} Arbeitstage im {new Date().getFullYear()} (nach Feiertagen)</div>
           </div>
           <div className="grid-2">
-            <div className="field-group"><label className="label">Jahreskapazität (Stunden)</label><input className="input" type="number" min="0" step="0.5" placeholder="z.B. 1900" value={formAnnualHours} onChange={e=>onAnnualChange(e.target.value)}/></div>
+            <div className="field-group"><label className="label">Jahreskapazität (Stunden)</label><input className="input" type="number" min="0" step="0.5" placeholder="z.B. 1900" value={form.annual_hours} onChange={e=>onAnnualChange(e.target.value)}/></div>
             <div className="field-group"><label className="label">Sollstunden / Tag</label><input className="input" type="number" min="0" max="24" step="0.01" placeholder="z.B. 8" value={form.daily_hours} onChange={e=>onDailyChange(e.target.value)}/></div>
           </div>
           <div className="grid-2">
@@ -1483,7 +1475,7 @@ export default function App(){
                         for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd2.includes(dow))wdCount++;}
                         const holidayDays=Math.round(bal.holidayDaysThisYear*10)/10;
                         const capacityDays=Math.round((wdCount-bal.holidayDaysThisYear)*10)/10;
-                        const capacityH=Math.round(capacityDays*(parseFloat(u.daily_hours)||0)*10)/10;
+                        const capacityH=u.annual_hours!=null?parseFloat(u.annual_hours):Math.round(capacityDays*(parseFloat(u.daily_hours)||0)*10)/10;
                         const monColor=si?(si.diff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
