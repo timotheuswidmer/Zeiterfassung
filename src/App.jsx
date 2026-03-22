@@ -1106,13 +1106,15 @@ export default function App(){
     const user=users.find(u=>u.id===userId);
     if(!user||user.employment_type!=="salaried"||!user.daily_hours)return null;
     const wd=parseWorkDays(user.work_days);
+    const pensum=wd.length/5;
     const daysInMonth=new Date(year,month+1,0).getDate();
     let workDays=0;
     for(let d=1;d<=daysInMonth;d++){const dow=(new Date(year,month,d).getDay())||7;if(wd.includes(dow))workDays++;}
+    const holidaysInMonth=holidays.filter(h=>{const d=new Date(h.date);return d.getFullYear()===year&&d.getMonth()===month;}).length*pensum;
     const monthStr=`${year}-${String(month+1).padStart(2,"0")}`;
     const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)).length;
     const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)).length;
-    const sollMin=workDays*user.daily_hours*60;
+    const sollMin=(workDays-holidaysInMonth)*user.daily_hours*60;
     const istEntries=entries.filter(e=>e.employee_id===userId&&e.date.startsWith(monthStr)).reduce((s,e)=>s+e.total_min,0);
     const istMin=istEntries+((freiInMonth+krankInMonth)*user.daily_hours*60);
     return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth};
