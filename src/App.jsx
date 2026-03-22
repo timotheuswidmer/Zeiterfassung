@@ -1629,7 +1629,7 @@ export default function App(){
                 </div>
                 {/* Manuell hinzufügen */}
                 {(()=>{
-                  const [hDate,setHDate]=React.useState("");const [hName,setHName]=React.useState("");
+                  const [hDate,setHDate]=useState("");const [hName,setHName]=useState("");
                   return(
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       <input type="date" className="input" style={{flex:"1 1 130px"}} value={hDate} onChange={e=>setHDate(e.target.value)}/>
