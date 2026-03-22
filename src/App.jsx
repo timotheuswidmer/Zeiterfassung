@@ -540,14 +540,22 @@ function UserModal({existing,onSave,onClose,holidays}){
     return Math.round((count-holidayDeduction)*10)/10;
   };
 
+  // Brutto-Arbeitstage (vor Feiertagsabzug)
+  const calcRawWorkdaysInYear=()=>{
+    const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);
+    const curY=new Date().getFullYear();
+    let count=0;
+    for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd.includes(String(dow)))count++;}
+    return count;
+  };
   const onDailyChange=v=>{
     const dh=parseFloat(v);
-    if(!isNaN(dh)&&dh>0){const wd=calcWorkdaysInYear();setForm(p=>({...p,daily_hours:v,annual_hours:String(Math.round(dh*wd*10)/10)}));}
+    if(!isNaN(dh)&&dh>0){const raw=calcRawWorkdaysInYear();setForm(p=>({...p,daily_hours:v,annual_hours:String(Math.round(dh*raw*10)/10)}));}
     else setForm(p=>({...p,daily_hours:v,annual_hours:""}));
   };
   const onAnnualChange=v=>{
     const ah=parseFloat(v);
-    if(!isNaN(ah)&&ah>0){const wd=calcWorkdaysInYear();setForm(p=>({...p,annual_hours:v,daily_hours:String(Math.round(ah/wd*100)/100)}));}
+    if(!isNaN(ah)&&ah>0){const raw=calcRawWorkdaysInYear();setForm(p=>({...p,annual_hours:v,daily_hours:String(Math.round(ah/raw*100)/100)}));}
     else setForm(p=>({...p,annual_hours:v,daily_hours:""}));
   };
 
@@ -582,7 +590,7 @@ function UserModal({existing,onSave,onClose,holidays}){
             <div className="pw-hint">{calcWorkdaysInYear()} Arbeitstage im {new Date().getFullYear()} (nach Feiertagen)</div>
           </div>
           <div className="grid-2">
-            <div className="field-group"><label className="label">Jahreskapazität (Stunden)</label><input className="input" type="number" min="0" step="0.5" placeholder="z.B. 1900" value={form.annual_hours} onChange={e=>onAnnualChange(e.target.value)}/></div>
+            <div className="field-group"><label className="label">Jahreskapazität Brutto (Stunden)</label><input className="input" type="number" min="0" step="0.5" placeholder="z.B. 1900" value={form.annual_hours} onChange={e=>onAnnualChange(e.target.value)}/>{(()=>{const ah=parseFloat(form.annual_hours);const dh=parseFloat(form.daily_hours);const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const hdays=(holidays||[]).filter(h=>h.year===new Date().getFullYear()).length*pensum;if(!ah||!dh)return null;const netto=Math.round((ah-hdays*dh)*10)/10;return<div className="pw-hint">Netto nach Feiertagen: <b>{netto}h</b> (−{Math.round(hdays*dh*10)/10}h)</div>;})()}</div>
             <div className="field-group"><label className="label">Sollstunden / Tag</label><input className="input" type="number" min="0" max="24" step="0.01" placeholder="z.B. 8" value={form.daily_hours} onChange={e=>onDailyChange(e.target.value)}/></div>
           </div>
           <div className="grid-2">
@@ -1104,9 +1112,9 @@ export default function App(){
     const monthStr=`${year}-${String(month+1).padStart(2,"0")}`;
     const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)).length;
     const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)).length;
-    const sollMin=(workDays-freiInMonth)*user.daily_hours*60;
+    const sollMin=workDays*user.daily_hours*60;
     const istEntries=entries.filter(e=>e.employee_id===userId&&e.date.startsWith(monthStr)).reduce((s,e)=>s+e.total_min,0);
-    const istMin=istEntries+(krankInMonth*user.daily_hours*60);
+    const istMin=istEntries+((freiInMonth+krankInMonth)*user.daily_hours*60);
     return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth};
   },[users,absences,entries]);
 
@@ -1480,7 +1488,7 @@ export default function App(){
                         const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
                           <td style={{padding:"8px 8px",fontSize:13,fontWeight:600}}>{u.name}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> ({capacityDays}T)</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {holidayDays}T Feiertage ({Math.round(holidayDays*(parseFloat(u.daily_hours)||0)*10)/10}h)</div></td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> Brutto</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {holidayDays}T Feiertage ({Math.round(holidayDays*(parseFloat(u.daily_hours)||0)*10)/10}h)</div><div style={{fontSize:11,color:"#e0e4f8",marginTop:2}}>{Math.round((capacityH-holidayDays*(parseFloat(u.daily_hours)||0))*10)/10}h Netto</div></td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{si?fmtTime(si.sollMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
