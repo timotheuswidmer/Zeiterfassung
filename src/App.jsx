@@ -1097,7 +1097,7 @@ export default function App(){
     }
     const usedFrei=absences.filter(a=>a.user_id===userId&&a.type==="frei").length;
     const sickDays=absences.filter(a=>a.user_id===userId&&a.type==="krank").length;
-    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).filter(h=>{const dow=(new Date(h.date).getDay())||7;return wd.includes(dow);}).length;
+    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).length*pensum;
     return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear:vacPerYearScaled};
   },[users,absences,holidays,entries]);
 
@@ -1480,17 +1480,18 @@ export default function App(){
                         const wd2=parseWorkDays(u.work_days);
                         let wdCount=0;
                         for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd2.includes(dow))wdCount++;}
-                        const capacityDays=wdCount-bal.holidayDaysThisYear;
+                        const holidayDays=Math.round(bal.holidayDaysThisYear*10)/10;
+                        const capacityDays=Math.round((wdCount-bal.holidayDaysThisYear)*10)/10;
                         const capacityH=Math.round(capacityDays*(parseFloat(u.daily_hours)||0)*10)/10;
                         const monColor=si?(si.diff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
                           <td style={{padding:"8px 8px",fontSize:13,fontWeight:600}}>{u.name}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> ({capacityDays}T)</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {bal.holidayDaysThisYear}T Feiertage ({Math.round(bal.holidayDaysThisYear*(parseFloat(u.daily_hours)||0)*10)/10}h)</div></td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> ({capacityDays}T)</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {holidayDays}T Feiertage ({Math.round(holidayDays*(parseFloat(u.daily_hours)||0)*10)/10}h)</div></td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{si?fmtTime(si.sollMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:cumColor}}>{rb?(rb.cumulativeDiff>=0?"+":"")+fmtTime(Math.abs(rb.cumulativeDiff)):"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:cumColor}}>{rb?(rb.cumulativeDiff>=0?"+":"-")+fmtTime(Math.abs(rb.cumulativeDiff)):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal?bal.vacPerYear.toFixed(1)+" T":"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal?bal.used.toFixed(1)+" T":"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal?(bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"):"#8890b8"}}>{bal?bal.remaining.toFixed(1)+" T":"—"}</td>
