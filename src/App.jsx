@@ -532,11 +532,12 @@ function UserModal({existing,onSave,onClose,holidays}){
   // Berechne Arbeitstage im aktuellen Jahr minus Feiertage auf Arbeitstagen
   const calcWorkdaysInYear=()=>{
     const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);
+    const pensum=wd.length/5;
     const curY=new Date().getFullYear();
     let count=0;
     for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd.includes(String(dow)))count++;}
-    const hols=(holidays||[]).filter(h=>h.year===curY).filter(h=>{const dow=(new Date(h.date).getDay())||7;return wd.includes(String(dow));}).length;
-    return count-hols;
+    const holidayDeduction=(holidays||[]).filter(h=>h.year===curY).length*pensum;
+    return Math.round((count-holidayDeduction)*10)/10;
   };
 
   const onDailyChange=v=>{
