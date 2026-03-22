@@ -1408,7 +1408,8 @@ export default function App(){
                     <table style={{width:"100%",borderCollapse:"collapse"}}>
                       <thead><tr style={{fontSize:11,color:"#8890b8",textTransform:"uppercase",letterSpacing:".06em"}}>
                         <th style={{textAlign:"left",padding:"6px 8px",fontWeight:700}}>Mitarbeiter</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>pro Jahr</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Jahreskapazität</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien/Jahr</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Anspruch</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Verbleibend</th>
@@ -1417,12 +1418,19 @@ export default function App(){
                       <tbody>{relevant.map(u=>{
                         const bal=calcVacBalance(u.id);
                         if(!bal)return null;
+                        const wd2=parseWorkDays(u.work_days);
+                        const curY=new Date().getFullYear();
+                        let wdCount=0;
+                        for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd2.includes(dow))wdCount++;}
+                        const capacityDays=wdCount-bal.holidayDaysThisYear;
+                        const capacityH=Math.round(capacityDays*(parseFloat(u.daily_hours)||0)*10)/10;
                         return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
                           <td style={{padding:"8px 8px",fontSize:13,fontWeight:500}}>{u.name}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{Math.round(bal.vacPerYear*10)/10} T</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{Math.round(bal.total*10)/10} T</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal.used} T</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{Math.round(bal.remaining*10)/10} T</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH} h<span style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif"}}> ({capacityDays} T)</span></td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal.vacPerYear.toFixed(1)} T</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{bal.total.toFixed(1)} T</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal.used.toFixed(1)} T</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining.toFixed(1)} T</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal.sick}</td>
                         </tr>);
                       })}</tbody>
