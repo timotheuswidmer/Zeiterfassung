@@ -732,6 +732,7 @@ export default function App(){
   const [absences,setAbsences]=useState([]);
   const [holidays,setHolidays]=useState([]);
   const [holidayYear,setHolidayYear]=useState(new Date().getFullYear());
+  const [hDate,setHDate]=useState("");const [hName,setHName]=useState("");
   const [absenceForm,setAbsenceForm]=useState({date:todayStr(),type:"frei",note:""});
   const [absenceSaving,setAbsenceSaving]=useState(false);
   const [dataReady,setDataReady]=useState(false);
@@ -1628,16 +1629,11 @@ export default function App(){
                   {holidays.filter(h=>h.year===holidayYear).length===0&&<div style={{color:"#8890b8",fontSize:13,padding:"8px 0"}}>Keine Feiertage für {holidayYear} — "Feiertage laden" klicken.</div>}
                 </div>
                 {/* Manuell hinzufügen */}
-                {(()=>{
-                  const [hDate,setHDate]=useState("");const [hName,setHName]=useState("");
-                  return(
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      <input type="date" className="input" style={{flex:"1 1 130px"}} value={hDate} onChange={e=>setHDate(e.target.value)}/>
-                      <input className="input" placeholder="Name…" style={{flex:"2 1 160px"}} value={hName} onChange={e=>setHName(e.target.value)}/>
-                      <button className="btn btn-ghost" style={{flexShrink:0}} onClick={()=>{if(hDate&&hName){addHoliday(hDate,hName,holidayYear);setHDate("");setHName("");}}}>+ Manuell</button>
-                    </div>
-                  );
-                })()}
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <input type="date" className="input" style={{flex:"1 1 130px"}} value={hDate} onChange={e=>setHDate(e.target.value)}/>
+                  <input className="input" placeholder="Name…" style={{flex:"2 1 160px"}} value={hName} onChange={e=>setHName(e.target.value)}/>
+                  <button className="btn btn-ghost" style={{flexShrink:0}} onClick={()=>{if(hDate&&hName){addHoliday(hDate,hName,holidayYear);setHDate("");setHName("");}}}>+ Manuell</button>
+                </div>
               </div>
             </div>
           </div>
