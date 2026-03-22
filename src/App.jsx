@@ -1060,11 +1060,11 @@ export default function App(){
     let totalDays=0;
     for(let y=minYear;y<=curYear;y++){
       totalDays+=vacPerYearScaled;
-      holidays.filter(h=>h.year===y).forEach(h=>{const dow=(new Date(h.date).getDay())||7;if(wd.includes(dow))totalDays++;});
+      totalDays+=holidays.filter(h=>h.year===y).length*pensum;
     }
     const usedFrei=absences.filter(a=>a.user_id===userId&&a.type==="frei").length;
     const sickDays=absences.filter(a=>a.user_id===userId&&a.type==="krank").length;
-    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).filter(h=>{const dow=(new Date(h.date).getDay())||7;return wd.includes(dow);}).length;
+    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).length*pensum;
     return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear:vacPerYearScaled};
   },[users,absences,holidays,entries]);
 
