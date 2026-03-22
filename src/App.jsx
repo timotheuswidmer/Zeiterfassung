@@ -1117,6 +1117,27 @@ export default function App(){
     return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth};
   },[users,absences,entries]);
 
+  const calcRunningBalance=useCallback((userId,untilMonth,untilYear)=>{
+    const user=users.find(u=>u.id===userId);
+    if(!user||user.employment_type!=="salaried"||!user.daily_hours)return null;
+    const allDates=entries.filter(e=>e.employee_id===userId).map(e=>e.date);
+    const absenceDates=absences.filter(a=>a.user_id===userId).map(a=>a.date);
+    const allD=[...allDates,...absenceDates];
+    if(!allD.length)return{cumulativeDiff:0,months:[]};
+    const firstDate=allD.reduce((a,b)=>a<b?a:b);
+    const startYear=parseInt(firstDate.substring(0,4));
+    const startMonth=parseInt(firstDate.substring(5,7))-1;
+    let cumulativeDiff=0;
+    const months=[];
+    let y=startYear,m=startMonth;
+    while(y<untilYear||(y===untilYear&&m<=untilMonth)){
+      const si=calcSollIst(userId,m,y);
+      if(si){cumulativeDiff+=si.diff;months.push({year:y,month:m,...si,runningDiff:cumulativeDiff});}
+      m++;if(m>11){m=0;y++;}
+    }
+    return{cumulativeDiff,months};
+  },[users,entries,absences,calcSollIst]);
+
   const myEntries=useMemo(()=>entries.filter(e=>e.employee_id===currentUser?.id),[entries,currentUser]);
   const dayTotal=useMemo(()=>myEntries.filter(e=>e.date===inlineForm.date).reduce((s,e)=>s+e.total_min,0),[myEntries,inlineForm.date]);
 
@@ -1397,6 +1418,39 @@ export default function App(){
                 <div key={label} className="summary-box"><div style={{color:"#8890b8",fontSize:10,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>{label}</div><div className="big-num">{val}</div></div>
               ))}
             </div>
+            {(()=>{
+              const now=new Date();
+              const curM=now.getMonth();const curY=now.getFullYear();
+              const salariedVisible=isAdmin
+                ?(filterEmployee==="alle"?users.filter(u=>u.employment_type==="salaried"):users.filter(u=>u.employment_type==="salaried"&&u.name===filterEmployee))
+                :[users.find(u=>u.id===currentUser?.id)].filter(u=>u?.employment_type==="salaried");
+              if(!salariedVisible.length)return null;
+              return(
+                <div className="card" style={{marginBottom:16}}>
+                  <div className="section-title">Stundenssaldo (kumuliert bis {MONTHS[curM]} {curY})</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                    {salariedVisible.map(u=>{
+                      if(!u)return null;
+                      const rb=calcRunningBalance(u.id,curM,curY);
+                      const si=calcSollIst(u.id,curM,curY);
+                      if(!rb||!si)return null;
+                      const cumColor=rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85";
+                      const monColor=si.diff>=0?"#4dffaa":"#ff6b85";
+                      return(
+                        <div key={u.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,padding:"10px 0",borderBottom:"1px solid #1e2235"}}>
+                          <div style={{fontWeight:600,fontSize:14}}>{u.name}</div>
+                          <div style={{display:"flex",gap:20,flexWrap:"wrap",fontSize:13}}>
+                            <div style={{color:"#8890b8"}}>Monat: Soll <span style={{color:"#e0e4f8"}}>{fmtTime(si.sollMin)}</span> · Ist <span style={{color:"#e0e4f8"}}>{fmtTime(si.istMin)}</span> · <span style={{color:monColor,fontWeight:700}}>{si.diff>=0?"+":""}{fmtTime(Math.abs(si.diff))}</span></div>
+                            <div style={{fontWeight:700,fontSize:15}}>Saldo: <span style={{color:cumColor}}>{rb.cumulativeDiff>=0?"+":""}{fmtTime(Math.abs(rb.cumulativeDiff))}</span></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="grid-2" style={{marginBottom:16}}>
               <div className="card"><div className="section-title">Nach Projekt</div>
                 {projectStats.length===0&&<div style={{color:"#8890b8",fontSize:13}}>Keine Daten</div>}
@@ -1517,7 +1571,19 @@ export default function App(){
                   <div style={{textAlign:"right"}}>
                     <div className="big-num" style={{fontSize:20}}>{fmtTime(totalMin)}</div>
                     <div style={{color:"#7c8bff",fontSize:12,fontFamily:"'DM Mono',monospace"}}>{fmtDecimal(totalMin)} h</div>
-                    {(()=>{const empUser=users.find(u=>u.name===name);if(!empUser)return null;const si=calcSollIst(empUser.id,abschlussMonth,abschlussYear);if(!si)return null;const diffColor=si.diff>=0?"#4dffaa":"#ff6b85";return(<div style={{marginTop:6,fontSize:11,color:"#8890b8"}}>Soll: {fmtTime(si.sollMin)} · Ist: {fmtTime(si.istMin)} · <span style={{color:diffColor,fontWeight:700}}>{si.diff>=0?"+":""}{fmtTime(Math.abs(si.diff))}</span></div>);})()}
+                    {(()=>{
+                      const empUser=users.find(u=>u.name===name);
+                      if(!empUser)return null;
+                      const si=calcSollIst(empUser.id,abschlussMonth,abschlussYear);
+                      const rb=calcRunningBalance(empUser.id,abschlussMonth,abschlussYear);
+                      if(!si)return null;
+                      const diffColor=si.diff>=0?"#4dffaa":"#ff6b85";
+                      const cumColor=rb&&rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85";
+                      return(<>
+                        <div style={{marginTop:6,fontSize:11,color:"#8890b8"}}>Soll: {fmtTime(si.sollMin)} · Ist: {fmtTime(si.istMin)} · <span style={{color:diffColor,fontWeight:700}}>{si.diff>=0?"+":""}{fmtTime(Math.abs(si.diff))}</span></div>
+                        {rb&&<div style={{marginTop:4,fontSize:12,fontWeight:700}}>Saldo kumuliert: <span style={{color:cumColor}}>{rb.cumulativeDiff>=0?"+":"-"}{fmtTime(Math.abs(rb.cumulativeDiff))}</span></div>}
+                      </>);
+                    })()}
                   </div>
                 </div>
                 <div className="table-wrap"><table>
