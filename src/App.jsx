@@ -522,12 +522,42 @@ function LoginScreen({onLogin}){
   );
 }
 
-function UserModal({existing,onSave,onClose}){
+function UserModal({existing,onSave,onClose,holidays}){
   const DAYS=[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"},{v:"6",l:"Sa"},{v:"7",l:"So"}];
   const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
   const toggleDay=v=>{const days=(form.work_days||"").split(",").filter(Boolean);const nd=days.includes(v)?days.filter(d=>d!==v):[...days,v].sort();setForm(p=>({...p,work_days:nd.join(",")}));};
+
+  // Berechne Arbeitstage im aktuellen Jahr minus Feiertage auf Arbeitstagen
+  const calcWorkdaysInYear=()=>{
+    const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);
+    const curY=new Date().getFullYear();
+    let count=0;
+    for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd.includes(String(dow)))count++;}
+    const hols=(holidays||[]).filter(h=>h.year===curY).filter(h=>{const dow=(new Date(h.date).getDay())||7;return wd.includes(String(dow));}).length;
+    return count-hols;
+  };
+
+  const onDailyChange=v=>{
+    const dh=parseFloat(v);
+    if(!isNaN(dh)&&dh>0){const wd=calcWorkdaysInYear();setForm(p=>({...p,daily_hours:v,annual_hours:String(Math.round(dh*wd*10)/10)}));}
+    else setForm(p=>({...p,daily_hours:v,annual_hours:""}));
+  };
+  const onAnnualChange=v=>{
+    const ah=parseFloat(v);
+    if(!isNaN(ah)&&ah>0){const wd=calcWorkdaysInYear();setForm(p=>({...p,annual_hours:v,daily_hours:String(Math.round(ah/wd*100)/100)}));}
+    else setForm(p=>({...p,annual_hours:v,daily_hours:""}));
+  };
+
+  // Initialisiere annual_hours aus daily_hours
+  const [annualHours,setAnnualHours]=useState(()=>{
+    if(existing?.daily_hours){const wd2=calcWorkdaysInYear();return String(Math.round(existing.daily_hours*wd2*10)/10);}
+    return "";
+  });
+  // Sync annual_hours in form state
+  const formAnnualHours=form.annual_hours??annualHours;
+
   const save=async()=>{
     if(!form.name.trim()||!form.username.trim()){setErr("Name und Benutzername sind Pflicht.");return;}
     if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}
@@ -552,14 +582,18 @@ function UserModal({existing,onSave,onClose}){
           </select>
         </div>
         {form.employment_type==="salaried"&&<>
-          <div className="grid-2">
-            <div className="field-group"><label className="label">Sollstunden / Tag</label><input className="input" type="number" min="0" max="24" step="0.5" placeholder="z.B. 8" value={form.daily_hours} onChange={e=>f("daily_hours")(e.target.value)}/></div>
-            <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{(()=>{const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const effective=Math.round((parseFloat(form.vacation_days_per_year)||25)*pensum*10)/10;return pensum<1?<div className="pw-hint">Bei {wd.length}/5 Tagen → effektiv <b>{effective} Tage</b>/Jahr</div>:null;})()}</div>
-          </div>
           <div className="field-group"><label className="label">Arbeitstage</label>
             <div style={{display:"flex",gap:6,marginTop:4}}>
               {DAYS.map(d=><div key={d.v} className={`day-chip${(form.work_days||"").split(",").includes(d.v)?" active":""}`} onClick={()=>toggleDay(d.v)}>{d.l}</div>)}
             </div>
+            <div className="pw-hint">{calcWorkdaysInYear()} Arbeitstage im {new Date().getFullYear()} (nach Feiertagen)</div>
+          </div>
+          <div className="grid-2">
+            <div className="field-group"><label className="label">Jahreskapazität (Stunden)</label><input className="input" type="number" min="0" step="0.5" placeholder="z.B. 1900" value={formAnnualHours} onChange={e=>onAnnualChange(e.target.value)}/></div>
+            <div className="field-group"><label className="label">Sollstunden / Tag</label><input className="input" type="number" min="0" max="24" step="0.01" placeholder="z.B. 8" value={form.daily_hours} onChange={e=>onDailyChange(e.target.value)}/></div>
+          </div>
+          <div className="grid-2">
+            <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{(()=>{const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const effective=Math.round((parseFloat(form.vacation_days_per_year)||25)*pensum*10)/10;return pensum<1?<div className="pw-hint">Bei {wd.length}/5 Tagen → effektiv <b>{effective} Tage</b>/Jahr</div>:null;})()}</div>
           </div>
         </>}
         {err&&<div className="msg-error">{err}</div>}
@@ -1060,11 +1094,10 @@ export default function App(){
     let totalDays=0;
     for(let y=minYear;y<=curYear;y++){
       totalDays+=vacPerYearScaled;
-      totalDays+=holidays.filter(h=>h.year===y).length*pensum;
     }
     const usedFrei=absences.filter(a=>a.user_id===userId&&a.type==="frei").length;
     const sickDays=absences.filter(a=>a.user_id===userId&&a.type==="krank").length;
-    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).length*pensum;
+    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).filter(h=>{const dow=(new Date(h.date).getDay())||7;return wd.includes(dow);}).length;
     return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear:vacPerYearScaled};
   },[users,absences,holidays,entries]);
 
@@ -1116,7 +1149,7 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
-      {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)}/>}
+      {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)} holidays={holidays}/>}
       {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStartWith={swStartWith} swPause={swPause} swStopClean={swStopClean}/>}
       {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
