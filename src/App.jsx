@@ -604,7 +604,7 @@ function UserModal({existing,onSave,onClose,holidays}){
   );
 }
 
-function EntryModal({existing,projects,activities,products,onSave,onClose,swRunning,swSeconds,swTimerId,swStartWith,swPause,swStopClean}){
+function EntryModal({existing,projects,activities,products,onSave,onClose,onStartInForm,swRunning,swSeconds,swTimerId,swStartWith,swPause,swStopClean}){
   const [form,setForm]=useState(existing?{date:existing.date,project:existing.project,activity:existing.activity,product:existing.product||"",hours:String(Math.floor(existing.total_min/60)),minutes:String(existing.total_min%60),note:existing.note||""}:{date:todayStr(),project:"",activity:"",product:"",hours:"",minutes:"",note:""});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const save=async()=>{
@@ -640,11 +640,7 @@ function EntryModal({existing,projects,activities,products,onSave,onClose,swRunn
             {String(Math.floor(swSeconds/3600)).padStart(2,"0")}:{String(Math.floor((swSeconds%3600)/60)).padStart(2,"0")}:{String(swSeconds%60).padStart(2,"0")}
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {!swRunning
-              ? <button className="btn-start" style={{padding:"8px 16px",fontSize:13}} disabled={!form.project||!form.activity} onClick={()=>swStartWith(form.project,form.activity,form.note)}>{swSeconds>0?"▶ Weiter":"▶ Start"}</button>
-              : <><button className="btn-pause" style={{padding:"8px 14px",fontSize:13}} onClick={swPause}>⏸</button>
-                  <button className="btn-stop" style={{padding:"8px 16px",fontSize:13}} onClick={handleSwStop}>⏹ Addieren</button></>
-            }
+            <button className="btn-start" style={{padding:"8px 16px",fontSize:13}} disabled={!form.project||!form.activity||swRunning} onClick={()=>onStartInForm&&onStartInForm(existing)}>▶ Im Erfassungsbereich fortführen</button>
           </div>
           {!form.project&&<span style={{fontSize:11,color:"#8890b8"}}>Zuerst Projekt & Tätigkeit wählen</span>}
         </div>
@@ -774,6 +770,7 @@ export default function App(){
   const isAdmin=currentUser?.role==="admin";
 
   const [entryModal,setEntryModal]=useState(null);
+  const [inlineEditId,setInlineEditId]=useState(null);
   const [formMsg,setFormMsg]=useState(null);
   const [selectedDate,setSelectedDate]=useState(todayStr());
   const FORM_KEY="ze_form_draft";
@@ -931,6 +928,14 @@ export default function App(){
       setSwRunning(true);
     }catch(e){alert("Fehler beim Starten: "+e.message);}
   };
+  // Eintrag in Erfassungsbereich weiterführen + Stoppuhr starten
+  const swStartFromEntry=async(entry)=>{
+    setInlineForm({date:entry.date,project:entry.project,activity:entry.activity,product:entry.product||"",hours:String(Math.floor(entry.total_min/60)),minutes:String(entry.total_min%60),note:entry.note||""});
+    setInlineEditId(entry.id);
+    setEntryModal(null);
+    setView("eintragen");
+    await swStartWith(entry.project,entry.activity,entry.note);
+  };
   // Stoppen ohne inlineForm zu überschreiben (für EntryModal)
   const swStopClean=async()=>{
     clearInterval(swRef.current);
@@ -977,7 +982,14 @@ export default function App(){
     if(totalMin<=0){setFormMsg({type:"error",text:"Zeit muss grösser als 0 sein."});return;}
     setInlineSaving(true);
     try{
-      await saveEntry({...inlineForm,totalMin});
+      if(inlineEditId){
+        const updated=await sb.update("entries",inlineEditId,{date:inlineForm.date,project:inlineForm.project,activity:inlineForm.activity,product:inlineForm.product||null,total_min:totalMin,note:inlineForm.note||null});
+        setEntries(prev=>prev.map(e=>e.id===inlineEditId?updated[0]:e));
+        setInlineEditId(null);
+        setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});
+      } else {
+        await saveEntry({...inlineForm,totalMin});
+      }
       const fresh=emptyForm();
       setInlineForm(fresh);
       try{localStorage.removeItem(FORM_KEY);}catch{}
@@ -1174,7 +1186,7 @@ export default function App(){
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
       {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)} holidays={holidays}/>}
-      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStartWith={swStartWith} swPause={swPause} swStopClean={swStopClean}/>}
+      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} onStartInForm={swStartFromEntry} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStartWith={swStartWith} swPause={swPause} swStopClean={swStopClean}/>}
       {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
         <ProjektAuswahlModal
