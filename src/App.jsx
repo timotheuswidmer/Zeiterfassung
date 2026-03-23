@@ -1266,7 +1266,18 @@ export default function App(){
                       <span style={{fontFamily:"'DM Mono',monospace",fontSize:24,fontWeight:500,color:dayTotal>0?"#4dffaa":"#2a2e48"}}>{fmtTime(dayTotal)}</span>
                       {dayTotal>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"#8890b8"}}>{fmtDecimal(dayTotal)} h</span>}
                     </div>
-                    {(()=>{const u=users.find(u=>u.id===currentUser?.id);if(!u||u.employment_type!=="salaried"||!u.daily_hours)return null;const sollMin=Math.round(u.daily_hours*60);const diff=dayTotal-sollMin;return<div style={{fontSize:11,color:"#8890b8",marginTop:3}}>Soll: <span style={{color:"#9aa2c8",fontFamily:"'DM Mono',monospace"}}>{fmtTime(sollMin)}</span>{dayTotal>0&&<span style={{marginLeft:6,fontWeight:700,color:diff>=0?"#4dffaa":"#ff6b85"}}>{diff>=0?"+":""}{fmtTime(Math.abs(diff))}</span>}</div>;})()}
+                    {(()=>{
+                      const u=users.find(u=>u.id===currentUser?.id);
+                      if(!u||u.employment_type!=="salaried"||!u.daily_hours)return null;
+                      const wd=parseWorkDays(u.work_days);
+                      const d=new Date(inlineForm.date+"T12:00:00");
+                      const dow=d.getDay()||7;
+                      const isWorkDay=wd.includes(dow);
+                      const isHoliday=holidays.some(h=>h.date===inlineForm.date);
+                      const sollMin=(isWorkDay&&!isHoliday)?Math.round(u.daily_hours*60):0;
+                      const diff=dayTotal-sollMin;
+                      return<div style={{fontSize:11,color:"#8890b8",marginTop:3}}>Soll: <span style={{color:"#9aa2c8",fontFamily:"'DM Mono',monospace"}}>{fmtTime(sollMin)}</span>{dayTotal>0&&sollMin>0&&<span style={{marginLeft:6,fontWeight:700,color:diff>=0?"#4dffaa":"#ff6b85"}}>{diff>=0?"+":""}{fmtTime(Math.abs(diff))}</span>}</div>;
+                    })()}
                   </div>
                 </div>
                 {/* Zeile 2: Projekt + Tätigkeit + Produkt */}
