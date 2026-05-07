@@ -609,8 +609,10 @@ function EntryModal({existing,projects,activities,products,onSave,onClose,onStar
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const save=async()=>{
     if(!form.project||!form.activity||(!form.hours&&!form.minutes)){setErr("Bitte Projekt, Tätigkeit und Zeit ausfüllen.");return;}
-    const totalMin=(parseInt(form.hours||0)*60)+parseInt(form.minutes||0);
+    let totalMin=(parseInt(form.hours||0)*60)+parseInt(form.minutes||0);
     if(totalMin<=0){setErr("Zeit muss grösser als 0 sein.");return;}
+    // Laufenden/pausierten Timer stoppen und Zeit einrechnen
+    if(swRunning||(!swRunning&&swTimerId)){const elapsed=await swStopClean();totalMin+=Math.round(elapsed/60);}
     setSaving(true);try{await onSave({...form,totalMin});}catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
   const handleSwStop=async()=>{
@@ -643,6 +645,7 @@ function EntryModal({existing,projects,activities,products,onSave,onClose,onStar
             <button className="btn-start" style={{padding:"8px 16px",fontSize:13}} disabled={!form.project||!form.activity||swRunning} onClick={()=>onStartInForm&&onStartInForm(existing)}>▶ Im Erfassungsbereich fortführen</button>
           </div>
           {!form.project&&<span style={{fontSize:11,color:"#8890b8"}}>Zuerst Projekt & Tätigkeit wählen</span>}
+          {swActive&&<span style={{fontSize:11,color:"#ffbe32"}}>⏱ Laufende Zeit wird beim Speichern automatisch eingerechnet</span>}
         </div>
         <div className="field-group"><label className="label">Produkt <span style={{color:"#8890b8",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label><Autocomplete value={form.product} onChange={v=>setForm(f=>({...f,product:v}))} options={products} placeholder="Produkt suchen…"/></div>
         <div className="field-group"><label className="label">Bemerkung</label><textarea className="input" rows={2} placeholder="Optionale Bemerkung…" value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
@@ -972,7 +975,7 @@ export default function App(){
   const logout=()=>{setCurrentUser(null);setDataReady(false);try{sessionStorage.removeItem("ze_session");}catch{}};
 
   const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
-    if(isEdit&&entryModal){const updated=await sb.update("entries",entryModal.id,{date,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===entryModal.id?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);}
+    if(isEdit&&entryModal){const savedId=entryModal.id;const updated=await sb.update("entries",savedId,{date,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===savedId?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);setInlineEditId(prev=>prev===savedId?null:prev);setInlineForm(f=>({...f,hours:"0",minutes:"0"}));}
     else{const created=await sb.insert("entries",{date,employee_id:currentUser.id,employee_name:currentUser.name,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>[created[0],...prev]);setFormMsg({type:"success",text:"✓ Eintrag gespeichert!"});}
     setTimeout(()=>setFormMsg(null),2500);
   };
