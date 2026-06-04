@@ -768,7 +768,7 @@ export default function App(){
   const [holidays,setHolidays]=useState([]);
   const [holidayYear,setHolidayYear]=useState(new Date().getFullYear());
   const [hDate,setHDate]=useState("");const [hName,setHName]=useState("");
-  const [absenceForm,setAbsenceForm]=useState({date:todayStr(),type:"frei",note:""});
+  const [absenceForm,setAbsenceForm]=useState({dateFrom:todayStr(),dateTo:todayStr(),type:"frei",note:""});
   const [absenceSaving,setAbsenceSaving]=useState(false);
   const [dataReady,setDataReady]=useState(false);
   const isAdmin=currentUser?.role==="admin";
@@ -1087,9 +1087,23 @@ export default function App(){
   };
   const deleteHoliday=async(id)=>{try{await sb.remove("holidays",id);setHolidays(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}};
   const addAbsence=async()=>{
-    if(!absenceForm.date)return;
+    if(!absenceForm.dateFrom||!absenceForm.dateTo)return;
     setAbsenceSaving(true);
-    try{const r=await sb.insert("absences",{user_id:currentUser.id,date:absenceForm.date,type:absenceForm.type,note:absenceForm.note||null});setAbsences(prev=>[r[0],...prev]);setAbsenceForm({date:todayStr(),type:"frei",note:""});}
+    try{
+      const myUser=users.find(u=>u.id===currentUser.id);
+      const wd=parseWorkDays(myUser?.work_days);
+      const from=new Date(absenceForm.dateFrom),to=new Date(absenceForm.dateTo);
+      if(from>to){alert("'Von' muss vor 'Bis' liegen.");return;}
+      const dates=[];
+      for(let d=new Date(from);d<=to;d.setDate(d.getDate()+1)){
+        const dow=d.getDay()||7;
+        if(wd.includes(dow))dates.push(d.toISOString().slice(0,10));
+      }
+      if(!dates.length){alert("Keine Arbeitstage im gewählten Zeitraum.");return;}
+      const results=await Promise.all(dates.map(date=>sb.insert("absences",{user_id:currentUser.id,date,type:absenceForm.type,note:absenceForm.note||null})));
+      setAbsences(prev=>[...results.map(r=>r[0]),...prev]);
+      setAbsenceForm(f=>({...f,dateFrom:todayStr(),dateTo:todayStr()}));
+    }
     catch(e){alert("Fehler: "+e.message);}finally{setAbsenceSaving(false);}
   };
   const addAbsenceForUser=async(userId,date,type,note)=>{
@@ -1391,7 +1405,8 @@ export default function App(){
                 )}
                 <div className="card" style={{marginBottom:12}}>
                   <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-                    <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Datum</label><input type="date" className="input" value={absenceForm.date} onChange={e=>setAbsenceForm(f=>({...f,date:e.target.value}))}/></div>
+                    <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Von</label><input type="date" className="input" value={absenceForm.dateFrom} onChange={e=>setAbsenceForm(f=>({...f,dateFrom:e.target.value,dateTo:f.dateTo<e.target.value?e.target.value:f.dateTo}))}/></div>
+                    <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Bis</label><input type="date" className="input" value={absenceForm.dateTo} min={absenceForm.dateFrom} onChange={e=>setAbsenceForm(f=>({...f,dateTo:e.target.value}))}/></div>
                     <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Typ</label>
                       <select className="input" value={absenceForm.type} onChange={e=>setAbsenceForm(f=>({...f,type:e.target.value}))}>
                         <option value="frei">Frei (Ferien/Feiertag)</option>
@@ -1402,6 +1417,13 @@ export default function App(){
                     <div className="field-group" style={{flex:"2 1 160px"}}><label className="label">Bemerkung</label><input className="input" placeholder="Optional…" value={absenceForm.note} onChange={e=>setAbsenceForm(f=>({...f,note:e.target.value}))}/></div>
                     <button className="btn btn-primary" style={{flexShrink:0,padding:"11px 20px"}} onClick={addAbsence} disabled={absenceSaving}>{absenceSaving?"…":"+ Erfassen"}</button>
                   </div>
+                  {absenceForm.dateFrom&&absenceForm.dateTo&&absenceForm.dateTo>absenceForm.dateFrom&&(()=>{
+                    const myUser=users.find(u=>u.id===currentUser?.id);
+                    const wd=parseWorkDays(myUser?.work_days);
+                    let count=0;
+                    for(let d=new Date(absenceForm.dateFrom);d<=new Date(absenceForm.dateTo);d.setDate(d.getDate()+1)){if(wd.includes(d.getDay()||7))count++;}
+                    return<div style={{fontSize:12,color:"#8890b8",marginTop:4}}>→ {count} Arbeitstag{count!==1?"e":""} werden erfasst</div>;
+                  })()}
                 </div>
                 {myAbsences.length>0&&<div className="card" style={{padding:0,overflow:"hidden"}}>
                   <div className="table-wrap"><table>
