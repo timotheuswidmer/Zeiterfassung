@@ -1503,14 +1503,16 @@ export default function App(){
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Soll Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Periode</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Saldo kumuliert</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Saldo bis heute</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien/Jahr</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Rest</th>
                       </tr></thead>
                       <tbody>{relevant.map(u=>{
                         const bal=calcVacBalance(u.id);
-                        const rb=calcRunningBalance(u.id,curM,curY);
+                        // Kumuliert immer bis heute — unabhängig vom Filter
+                        const nowD=new Date();
+                        const rb=calcRunningBalance(u.id,nowD.getMonth(),nowD.getFullYear());
                         if(!bal&&!rb)return null;
                         // Soll/Ist für den gewählten Zeitraum (Von–Bis) summieren
                         const fYM=toYM(fromYear,fromMonth),tYM=toYM(curY,curM);
