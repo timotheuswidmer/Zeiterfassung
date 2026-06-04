@@ -1481,7 +1481,7 @@ export default function App(){
             </div>
             {/* Kombinierte Übersicht: Stundensaldo + Ferienguthaben */}
             {(()=>{
-              const now=new Date();const curM=now.getMonth();const curY=now.getFullYear();
+              const curM=toMonth;const curY=toYear;
               const salariedUsers=users.filter(u=>u.employment_type==="salaried");
               if(!salariedUsers.length)return null;
               const relevant=isAdmin?(filterEmployee==="alle"?salariedUsers:salariedUsers.filter(u=>u.name===filterEmployee)):salariedUsers.filter(u=>u.id===currentUser?.id);
