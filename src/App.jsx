@@ -121,6 +121,7 @@ const CSS = `
   .day-chip{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:1.5px solid #1e2235;font-size:11px;font-weight:700;cursor:pointer;color:#8890b8;transition:all .15s;user-select:none;}.day-chip.active{background:#4f5de8;border-color:#4f5de8;color:#fff;}
   .badge-frei{background:rgba(77,255,170,0.12);color:#4dffaa;border:1px solid rgba(77,255,170,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;}
   .badge-krank{background:rgba(255,107,133,0.12);color:#ff6b85;border:1px solid rgba(255,107,133,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;}
+  .badge-unbezahlt{background:rgba(255,190,50,0.12);color:#ffbe32;border:1px solid rgba(255,190,50,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;}
   .balance-box{background:rgba(79,93,232,0.08);border:1px solid rgba(79,93,232,0.2);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:8px;}
   .balance-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
   .soll-ist-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
@@ -1129,10 +1130,12 @@ export default function App(){
     const monthStr=`${year}-${String(month+1).padStart(2,"0")}`;
     const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)).length;
     const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)).length;
-    const sollMin=(workDays-holidaysInMonth)*user.daily_hours*60;
+    const unbezahltInMonth=absences.filter(a=>a.user_id===userId&&a.type==="unbezahlt"&&a.date.startsWith(monthStr)).length;
+    // Unbezahlt reduziert das Soll (kein Ferienabzug, kein Saldo-Einfluss)
+    const sollMin=Math.max(0,(workDays-holidaysInMonth-unbezahltInMonth)*user.daily_hours*60);
     const istEntries=entries.filter(e=>e.employee_id===userId&&e.date.startsWith(monthStr)).reduce((s,e)=>s+e.total_min,0);
     const istMin=istEntries+((freiInMonth+krankInMonth)*user.daily_hours*60);
-    return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth};
+    return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth,unbezahltInMonth};
   },[users,absences,entries]);
 
   const calcRunningBalance=useCallback((userId,untilMonth,untilYear)=>{
@@ -1393,6 +1396,7 @@ export default function App(){
                       <select className="input" value={absenceForm.type} onChange={e=>setAbsenceForm(f=>({...f,type:e.target.value}))}>
                         <option value="frei">Frei (Ferien/Feiertag)</option>
                         <option value="krank">Krank</option>
+                        <option value="unbezahlt">Unbezahlter Urlaub</option>
                       </select>
                     </div>
                     <div className="field-group" style={{flex:"2 1 160px"}}><label className="label">Bemerkung</label><input className="input" placeholder="Optional…" value={absenceForm.note} onChange={e=>setAbsenceForm(f=>({...f,note:e.target.value}))}/></div>
@@ -1405,7 +1409,7 @@ export default function App(){
                     <tbody>{myAbsences.map(a=>(
                       <tr key={a.id}>
                         <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{a.date}</td>
-                        <td><span className={a.type==="frei"?"badge-frei":"badge-krank"}>{a.type==="frei"?"Frei":"Krank"}</span></td>
+                        <td><span className={a.type==="frei"?"badge-frei":a.type==="krank"?"badge-krank":"badge-unbezahlt"}>{a.type==="frei"?"Frei":a.type==="krank"?"Krank":"Unbezahlt"}</span></td>
                         <td className="hide-mobile" style={{color:"#8890b8"}}>{a.note||"—"}</td>
                         <td style={{textAlign:"right"}}><button className="btn-danger" onClick={()=>deleteAbsence(a.id)}>✕</button></td>
                       </tr>
