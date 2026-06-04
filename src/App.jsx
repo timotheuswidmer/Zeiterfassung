@@ -1491,17 +1491,18 @@ export default function App(){
               if(!salariedUsers.length)return null;
               const relevant=isAdmin?(filterEmployee==="alle"?salariedUsers:salariedUsers.filter(u=>u.name===filterEmployee)):salariedUsers.filter(u=>u.id===currentUser?.id);
               if(!relevant.length)return null;
+              const periodLabel=fromYear===curY&&fromMonth===curM?`${MONTHS[curM]} ${curY}`:fromYear===curY?`${MONTHS[fromMonth]} – ${MONTHS[curM]} ${curY}`:`${MONTHS[fromMonth]} ${fromYear} – ${MONTHS[curM]} ${curY}`;
               return(
                 <div className="card" style={{marginBottom:16}}>
-                  <div className="section-title">Übersicht Festangestellte — {MONTHS[curM]} {curY}</div>
+                  <div className="section-title">Übersicht Festangestellte — {periodLabel}</div>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse"}}>
                       <thead><tr style={{fontSize:11,color:"#8890b8",textTransform:"uppercase",letterSpacing:".06em"}}>
                         <th style={{textAlign:"left",padding:"6px 8px",fontWeight:700}}>Mitarbeiter</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Jahreskapazität</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Soll Monat</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Monat</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Monat</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Soll Periode</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Periode</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Saldo kumuliert</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien/Jahr</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
@@ -1509,14 +1510,16 @@ export default function App(){
                       </tr></thead>
                       <tbody>{relevant.map(u=>{
                         const bal=calcVacBalance(u.id);
-                        const si=calcSollIst(u.id,curM,curY);
                         const rb=calcRunningBalance(u.id,curM,curY);
-                        if(!bal&&!si)return null;
+                        if(!bal&&!rb)return null;
+                        // Soll/Ist für den gewählten Zeitraum (Von–Bis) summieren
+                        const fYM=toYM(fromYear,fromMonth),tYM=toYM(curY,curM);
+                        const si=rb?rb.months.filter(m=>toYM(m.year,m.month)>=fYM&&toYM(m.year,m.month)<=tYM).reduce((a,m)=>({sollMin:a.sollMin+m.sollMin,istMin:a.istMin+m.istMin,diff:a.diff+m.diff}),{sollMin:0,istMin:0,diff:0}):null;
                         const wd2=parseWorkDays(u.work_days);
                         let wdCount=0;
                         for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd2.includes(dow))wdCount++;}
-                        const holidayDays=Math.round(bal.holidayDaysThisYear*10)/10;
-                        const capacityDays=Math.round((wdCount-bal.holidayDaysThisYear)*10)/10;
+                        const holidayDays=Math.round((bal?.holidayDaysThisYear||0)*10)/10;
+                        const capacityDays=Math.round((wdCount-(bal?.holidayDaysThisYear||0))*10)/10;
                         const capacityH=u.annual_hours!=null?parseFloat(u.annual_hours):Math.round(capacityDays*(parseFloat(u.daily_hours)||0)*10)/10;
                         const monColor=si?(si.diff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
