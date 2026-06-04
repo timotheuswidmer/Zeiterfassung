@@ -1168,6 +1168,8 @@ export default function App(){
 
   const projectStats=useMemo(()=>{const m={};filteredEntries.forEach(e=>{if(!m[e.project])m[e.project]=0;m[e.project]+=e.total_min;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);},[filteredEntries]);
   const activityStats=useMemo(()=>{const m={};filteredEntries.forEach(e=>{if(!m[e.activity])m[e.activity]=0;m[e.activity]+=e.total_min;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);},[filteredEntries]);
+  // Gesamtverbrauch pro Projekt (alle User, alle Zeit) — für Budget-Anzeige
+  const projectTotalStats=useMemo(()=>{const m={};entries.forEach(e=>{if(!m[e.project])m[e.project]=0;m[e.project]+=e.total_min;});return m;},[entries]);
 
   // Projekte die im gewählten Zeitraum vorkommen (für Projektauswahl-Modal)
   const projectsInRange=useMemo(()=>[...new Set(filteredEntries.map(e=>e.project))].sort(),[filteredEntries]);
@@ -1454,16 +1456,19 @@ export default function App(){
                 {projectStats.map(([name,min])=>{
                   const budgetH=projectBudgets[name];
                   const budgetMin=budgetH?budgetH*60:null;
-                  const pct=budgetMin?Math.min((min/budgetMin)*100,100):(min/maxStat)*100;
-                  const over=budgetMin&&min>budgetMin;
-                  const barColor=!budgetMin?"linear-gradient(90deg,#4f5de8,#7c8bff)":over?"linear-gradient(90deg,#c0392b,#ff4d6b)":min/budgetMin>0.8?"linear-gradient(90deg,#c07c00,#ffbe32)":"linear-gradient(90deg,#1da86a,#4dffaa)";
+                  // Gesamtverbrauch (alle User, alle Zeit) für Budget-Vergleich
+                  const totalMin=projectTotalStats[name]||0;
+                  const pct=budgetMin?Math.min((totalMin/budgetMin)*100,100):(min/maxStat)*100;
+                  const over=budgetMin&&totalMin>budgetMin;
+                  const barColor=!budgetMin?"linear-gradient(90deg,#4f5de8,#7c8bff)":over?"linear-gradient(90deg,#c0392b,#ff4d6b)":totalMin/budgetMin>0.8?"linear-gradient(90deg,#c07c00,#ffbe32)":"linear-gradient(90deg,#1da86a,#4dffaa)";
                   return(
                   <div key={name} className="stat-row">
                     <div style={{minWidth:90,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
                     <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
                       <div className="bar-bg"><div className="bar-fill" style={{width:`${pct}%`,background:barColor}}/></div>
-                      {budgetMin&&<div style={{fontSize:10,color:over?"#ff4d6b":min/budgetMin>0.8?"#ffbe32":"#4dffaa"}}>
-                        {over?`+${fmtTime(min-budgetMin)} überschritten`:`${fmtTime(budgetMin-min)} verbleibend`}
+                      {budgetMin&&<div style={{fontSize:10,color:over?"#ff4d6b":totalMin/budgetMin>0.8?"#ffbe32":"#4dffaa"}}>
+                        {over?`+${fmtTime(totalMin-budgetMin)} überschritten`:`${fmtTime(budgetMin-totalMin)} verbleibend`}
+                        <span style={{color:"#8890b8"}}> (gesamt: {fmtTime(totalMin)} / {budgetH}h)</span>
                       </div>}
                     </div>
                     <div style={{minWidth:65,textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>
