@@ -1136,27 +1136,29 @@ export default function App(){
     return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear:vacPerYearScaled};
   },[users,absences,holidays,entries]);
 
-  const calcSollIst=useCallback((userId,month,year)=>{
+  const calcSollIst=useCallback((userId,month,year,cutoffDay=null)=>{
     const user=users.find(u=>u.id===userId);
     if(!user||user.employment_type!=="salaried"||!user.daily_hours)return null;
     const wd=parseWorkDays(user.work_days);
     const pensum=wd.length/5;
     const daysInMonth=new Date(year,month+1,0).getDate();
-    let workDays=0;
-    for(let d=1;d<=daysInMonth;d++){const dow=(new Date(year,month,d).getDay())||7;if(wd.includes(dow))workDays++;}
-    const holidaysInMonth=holidays.filter(h=>{const d=new Date(h.date);return d.getFullYear()===year&&d.getMonth()===month;}).length*pensum;
+    const lastDay=cutoffDay?Math.min(cutoffDay,daysInMonth):daysInMonth;
     const monthStr=`${year}-${String(month+1).padStart(2,"0")}`;
-    const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)).length;
-    const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)).length;
-    const unbezahltInMonth=absences.filter(a=>a.user_id===userId&&a.type==="unbezahlt"&&a.date.startsWith(monthStr)).length;
+    const cutoffStr=cutoffDay?`${monthStr}-${String(lastDay).padStart(2,"0")}`:null;
+    let workDays=0;
+    for(let d=1;d<=lastDay;d++){const dow=(new Date(year,month,d).getDay())||7;if(wd.includes(dow))workDays++;}
+    const holidaysInMonth=holidays.filter(h=>{const d=new Date(h.date);return d.getFullYear()===year&&d.getMonth()===month&&(!cutoffStr||h.date<=cutoffStr);}).length*pensum;
+    const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
+    const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
+    const unbezahltInMonth=absences.filter(a=>a.user_id===userId&&a.type==="unbezahlt"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
     // Unbezahlt reduziert das Soll (kein Ferienabzug, kein Saldo-Einfluss)
     const sollMin=Math.max(0,(workDays-holidaysInMonth-unbezahltInMonth)*user.daily_hours*60);
-    const istEntries=entries.filter(e=>e.employee_id===userId&&e.date.startsWith(monthStr)).reduce((s,e)=>s+e.total_min,0);
+    const istEntries=entries.filter(e=>e.employee_id===userId&&e.date.startsWith(monthStr)&&(!cutoffStr||e.date<=cutoffStr)).reduce((s,e)=>s+e.total_min,0);
     const istMin=istEntries+((freiInMonth+krankInMonth)*user.daily_hours*60);
     return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth,unbezahltInMonth};
   },[users,absences,entries]);
 
-  const calcRunningBalance=useCallback((userId,untilMonth,untilYear)=>{
+  const calcRunningBalance=useCallback((userId,untilMonth,untilYear,untilDay=null)=>{
     const user=users.find(u=>u.id===userId);
     if(!user||user.employment_type!=="salaried"||!user.daily_hours)return null;
     const allDates=entries.filter(e=>e.employee_id===userId).map(e=>e.date);
@@ -1170,7 +1172,8 @@ export default function App(){
     const months=[];
     let y=startYear,m=startMonth;
     while(y<untilYear||(y===untilYear&&m<=untilMonth)){
-      const si=calcSollIst(userId,m,y);
+      const isLastMonth=y===untilYear&&m===untilMonth;
+      const si=calcSollIst(userId,m,y,isLastMonth?untilDay:null);
       if(si){cumulativeDiff+=si.diff;months.push({year:y,month:m,...si,runningDiff:cumulativeDiff});}
       m++;if(m>11){m=0;y++;}
     }
@@ -1542,7 +1545,7 @@ export default function App(){
                         const bal=calcVacBalance(u.id);
                         // Kumuliert immer bis heute — unabhängig vom Filter
                         const nowD=new Date();
-                        const rb=calcRunningBalance(u.id,nowD.getMonth(),nowD.getFullYear());
+                        const rb=calcRunningBalance(u.id,nowD.getMonth(),nowD.getFullYear(),nowD.getDate());
                         if(!bal&&!rb)return null;
                         // Soll/Ist für den gewählten Zeitraum (Von–Bis) summieren
                         const fYM=toYM(fromYear,fromMonth),tYM=toYM(curY,curM);
