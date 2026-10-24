@@ -781,7 +781,7 @@ export default function App(){
   const [formMsg,setFormMsg]=useState(null);
   const [selectedDate,setSelectedDate]=useState(todayStr());
   const [inlineForm,setInlineForm]=useState(()=>{
-    try{const s=localStorage.getItem(FORM_KEY);return s?JSON.parse(s):emptyForm();}catch{return emptyForm();}
+    try{const s=localStorage.getItem(FORM_KEY);return s?{...JSON.parse(s),date:todayStr()}:emptyForm();}catch{return emptyForm();}
   });
   const [inlineSaving,setInlineSaving]=useState(false);
 
