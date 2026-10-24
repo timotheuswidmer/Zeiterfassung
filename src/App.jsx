@@ -773,20 +773,24 @@ export default function App(){
   const isAdmin=currentUser?.role==="admin";
 
   const [entryModal,setEntryModal]=useState(null);
-  const [inlineEditId,setInlineEditId]=useState(null);
+  const FORM_KEY="ze_form_draft";
+  const EDIT_ID_KEY="ze_inline_edit_id";
+  const emptyForm=()=>({date:todayStr(),project:"",activity:"",product:"",hours:"",minutes:"",note:""});
+  const [inlineEditId,setInlineEditId]=useState(()=>{try{return localStorage.getItem(EDIT_ID_KEY)||null;}catch{return null;}});
   const [formMsg,setFormMsg]=useState(null);
   const [selectedDate,setSelectedDate]=useState(todayStr());
-  const FORM_KEY="ze_form_draft";
-  const emptyForm=()=>({date:todayStr(),project:"",activity:"",product:"",hours:"",minutes:"",note:""});
   const [inlineForm,setInlineForm]=useState(()=>{
     try{const s=localStorage.getItem(FORM_KEY);return s?JSON.parse(s):emptyForm();}catch{return emptyForm();}
   });
   const [inlineSaving,setInlineSaving]=useState(false);
 
-  // Draft live in localStorage speichern
+  // Draft + editId live in localStorage speichern
   useEffect(()=>{
     try{localStorage.setItem(FORM_KEY,JSON.stringify(inlineForm));}catch{}
   },[inlineForm]);
+  useEffect(()=>{
+    try{if(inlineEditId)localStorage.setItem(EDIT_ID_KEY,inlineEditId);else localStorage.removeItem(EDIT_ID_KEY);}catch{}
+  },[inlineEditId]);
   const [dropdownOpen,setDropdownOpen]=useState(false);
   const [pwModal,setPwModal]=useState(false);
   // Stoppuhr — persistent via Supabase (geräteübergreifend)
