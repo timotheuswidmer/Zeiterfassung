@@ -1234,11 +1234,10 @@ export default function App(){
     const startY=user.start_date?parseInt(user.start_date.substring(0,4)):(allDates.length>0?Math.min(...allDates.map(d=>parseInt(d.substring(0,4)))):curYear);
     const startM=user.start_date?parseInt(user.start_date.substring(5,7))-1:0;
     const startD=user.start_date?parseInt(user.start_date.substring(8,10)):1;
+    // Anspruch fürs ganze laufende Jahr (bis Dezember), inkl. geplanter Pensum-Wechsel
     let totalDays=0;
-    const curMonth=new Date().getMonth();
     for(let y=startY;y<=curYear;y++){
-      const monthsInYear=y===curYear?curMonth+1:12;
-      for(let mo=y===startY?startM:0;mo<monthsInYear;mo++){
+      for(let mo=y===startY?startM:0;mo<12;mo++){
         const pm=getPensumForMonth(userId,mo,y);
         const pensum=parseWorkDays(pm?.work_days||user.work_days).length/5;
         const daysInMonth=new Date(y,mo+1,0).getDate();
