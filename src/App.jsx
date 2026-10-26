@@ -523,10 +523,13 @@ function LoginScreen({onLogin}){
   );
 }
 
-function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePensum}){
+function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePensum,onUpdatePensum}){
   const DAYS=[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"},{v:"6",l:"Sa"},{v:"7",l:"So"}];
   const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",annual_hours:existing.annual_hours!=null?String(existing.annual_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",annual_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
   const [pensumChange,setPensumChange]=useState({valid_from:"",weekly_hours:"",work_days:existing?.work_days||"1,2,3,4,5"});
+  const [editingPensumId,setEditingPensumId]=useState(null);
+  const [editPensumDraft,setEditPensumDraft]=useState({valid_from:"",weekly_hours:"",work_days:"1,2,3,4,5"});
+  const [deleteConfirmId,setDeleteConfirmId]=useState(null);
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
   const toggleDay=v=>{const days=(form.work_days||"").split(",").filter(Boolean);const nd=days.includes(v)?days.filter(d=>d!==v):[...days,v].sort();setForm(p=>({...p,work_days:nd.join(",")}));};
@@ -598,7 +601,49 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
           <div className="grid-2">
             <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{(()=>{const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const effective=Math.round((parseFloat(form.vacation_days_per_year)||25)*pensum*10)/10;return pensum<1?<div className="pw-hint">Bei {wd.length}/5 Tagen → effektiv <b>{effective} Tage</b>/Jahr</div>:null;})()}</div>
           </div>
-          {existing&&(()=>{const uPh=pensumHistory.filter(h=>h.user_id===existing.id).sort((a,b)=>a.valid_from.localeCompare(b.valid_from));return uPh.length>0&&<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}><div className="label" style={{marginBottom:8}}>Pensum-Verlauf</div>{uPh.map(h=>{const wdC=(h.work_days||"1,2,3,4,5").split(",").filter(Boolean).length;const weeklyH=Math.round(h.daily_hours*wdC*100)/100;const pct=Math.round(wdC/5*100);return<div key={h.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,fontSize:13}}><span style={{fontFamily:"'DM Mono',monospace",color:"#7c8bff",minWidth:110}}>{h.valid_from==="2000-01-01"?"Startwert":`${MONTHS[parseInt(h.valid_from.substring(5,7))-1]} ${h.valid_from.substring(0,4)}`}</span><span style={{color:"#e0e4f8"}}>{pct}% · {weeklyH}h/Wo</span>{uPh.length>1&&<button className="btn-danger" style={{padding:"2px 7px",fontSize:11,marginLeft:"auto"}} onClick={()=>onDeletePensum&&onDeletePensum(h.id)}>✕</button>}</div>;})} </div>;})()}
+          {existing&&(()=>{
+            const uPh=pensumHistory.filter(h=>h.user_id===existing.id).sort((a,b)=>a.valid_from.localeCompare(b.valid_from));
+            if(!uPh.length)return null;
+            return<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}>
+              <div className="label" style={{marginBottom:8}}>Pensum-Verlauf</div>
+              {uPh.map(h=>{
+                const wdC=(h.work_days||"1,2,3,4,5").split(",").filter(Boolean).length;
+                const weeklyH=Math.round(h.daily_hours*wdC*100)/100;
+                const pct=Math.round(wdC/5*100);
+                const label=h.valid_from==="2000-01-01"?"Startwert":`${MONTHS[parseInt(h.valid_from.substring(5,7))-1]} ${h.valid_from.substring(0,4)}`;
+                if(editingPensumId===h.id){
+                  const ewdC=(editPensumDraft.work_days||"").split(",").filter(Boolean).length;
+                  const ewh=parseFloat(editPensumDraft.weekly_hours);
+                  return<div key={h.id} style={{background:"rgba(79,93,232,0.08)",border:"1px solid #2e3150",borderRadius:8,padding:"10px 12px",marginBottom:8}}>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>
+                      <div className="field-group" style={{minWidth:130}}><label className="label">Vollzeit h/Wo (100%)</label><input className="input" type="number" min="0" max="80" step="0.5" value={editPensumDraft.weekly_hours} onChange={e=>setEditPensumDraft(p=>({...p,weekly_hours:e.target.value}))}/></div>
+                      <div className="field-group"><label className="label">Arbeitstage</label><div style={{display:"flex",gap:4}}>{[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"}].map(d=>{const active=(editPensumDraft.work_days||"").split(",").includes(d.v);return<div key={d.v} className={`day-chip${active?" active":""}`} style={{padding:"4px 8px",fontSize:12,cursor:"pointer",userSelect:"none"}} onClick={()=>{const days=(editPensumDraft.work_days||"").split(",").filter(Boolean);const nd=active?days.filter(x=>x!==d.v):[...days,d.v].sort();setEditPensumDraft(p=>({...p,work_days:nd.join(",")}));}}>{d.l}</div>})}</div>
+                      {ewh&&ewdC?<div className="pw-hint">{Math.round(ewdC/5*100)}% → <b>{Math.round(ewh*ewdC/5*10)/10}h/Wo</b></div>:null}
+                      </div>
+                    <div style={{display:"flex",gap:6,marginTop:8}}>
+                      <button className="btn btn-primary" style={{padding:"6px 12px",fontSize:12}} onClick={async()=>{if(!editPensumDraft.weekly_hours)return;const wd2=editPensumDraft.work_days||"1,2,3,4,5";const wdC2=wd2.split(",").filter(Boolean).length||1;const dailyH=Math.round(parseFloat(editPensumDraft.weekly_hours)/5*100)/100;await onUpdatePensum(h.id,{daily_hours:dailyH,work_days:wd2});setEditingPensumId(null);}}>Speichern</button>
+                      <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>setEditingPensumId(null)}>Abbrechen</button>
+                    </div>
+                  </div>;
+                }
+                if(deleteConfirmId===h.id){
+                  return<div key={h.id} style={{background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.3)",borderRadius:8,padding:"10px 12px",marginBottom:8,fontSize:13}}>
+                    <div style={{marginBottom:6,color:"#ff6b85",fontWeight:600}}>Eintrag löschen?</div>
+                    <div style={{color:"#9aa2c8",marginBottom:10}}>Achtung: Die Soll-Stunden für alle Monate ab <b>{label}</b> werden rückwirkend mit dem vorherigen Pensum neu berechnet. Nur löschen wenn der Eintrag falsch war.</div>
+                    <div style={{display:"flex",gap:6}}><button className="btn-danger" style={{padding:"6px 12px",fontSize:12}} onClick={()=>{onDeletePensum&&onDeletePensum(h.id);setDeleteConfirmId(null);}}>Ja, löschen</button><button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>setDeleteConfirmId(null)}>Abbrechen</button></div>
+                  </div>;
+                }
+                return<div key={h.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,fontSize:13}}>
+                  <span style={{fontFamily:"'DM Mono',monospace",color:"#7c8bff",minWidth:110}}>{label}</span>
+                  <span style={{color:"#e0e4f8"}}>{pct}% · {weeklyH}h/Wo</span>
+                  <div style={{marginLeft:"auto",display:"flex",gap:4}}>
+                    <button className="btn-warn" style={{padding:"2px 7px",fontSize:11}} onClick={()=>{setEditingPensumId(h.id);setEditPensumDraft({weekly_hours:String(weeklyH*5/wdC),work_days:h.work_days||"1,2,3,4,5"});}}>✎</button>
+                    {uPh.length>1&&<button className="btn-danger" style={{padding:"2px 7px",fontSize:11}} onClick={()=>setDeleteConfirmId(h.id)}>✕</button>}
+                  </div>
+                </div>;
+              })}
+            </div>;
+          })()}
           {existing&&<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}>
             <div className="label" style={{marginBottom:10}}>Pensum-Änderung (optional)</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>
@@ -1268,7 +1313,7 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
-      {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)} holidays={holidays} pensumHistory={pensumHistory} onDeletePensum={async(id)=>{try{await sb.remove("pensum_history",id);setPensumHistory(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}}}/>}
+      {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)} holidays={holidays} pensumHistory={pensumHistory} onDeletePensum={async(id)=>{try{await sb.remove("pensum_history",id);setPensumHistory(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}}} onUpdatePensum={async(id,data)=>{try{const r=await sb.update("pensum_history",id,data);setPensumHistory(prev=>prev.map(h=>h.id===id?{...h,...r[0]}:h));}catch(e){alert("Fehler: "+e.message);}}}/>}
       {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} onStartInForm={swStartFromEntry} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStartWith={swStartWith} swPause={swPause} swStopClean={swStopClean}/>}
       {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
