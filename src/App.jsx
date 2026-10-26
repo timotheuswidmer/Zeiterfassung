@@ -1640,7 +1640,7 @@ export default function App(){
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Saldo bis heute</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien/Jahr</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Anspruch</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Rest</th>
                       </tr></thead>
@@ -1668,7 +1668,7 @@ export default function App(){
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:cumColor}}>{rb?(rb.cumulativeDiff>=0?"+":"-")+fmtTime(Math.abs(rb.cumulativeDiff)):"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal?bal.vacPerYear.toFixed(1)+" T":"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal?bal.total.toFixed(1)+" T":"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal?bal.used.toFixed(1)+" T":"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal?(bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"):"#8890b8"}}>{bal?bal.remaining.toFixed(1)+" T":"—"}</td>
                         </tr>);
