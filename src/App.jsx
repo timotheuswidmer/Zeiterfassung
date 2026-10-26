@@ -1189,7 +1189,7 @@ export default function App(){
     try{
       if(absenceForm.dateFrom>absenceForm.dateTo){alert("'Von' muss vor 'Bis' liegen.");return;}
       const {dates}=absenceDatesFor(currentUser.id,absenceForm.dateFrom,absenceForm.dateTo);
-      if(!dates.length){alert("Keine Arbeitstage im gewählten Zeitraum (Feiertage werden nicht erfasst).");return;}
+      if(!dates.length){alert("Keine Arbeitstage im gewählten Zeitraum (Feiertage und bereits erfasste Tage werden übersprungen).");return;}
       const results=await Promise.all(dates.map(date=>sb.insert("absences",{user_id:currentUser.id,date,type:absenceForm.type,note:absenceForm.note||null})));
       setAbsences(prev=>[...results.map(r=>r[0]),...prev]);
       setAbsenceForm(f=>({...f,dateFrom:todayStr(),dateTo:todayStr()}));
@@ -1214,14 +1214,15 @@ export default function App(){
   // Arbeitstage eines Zeitraums laut Pensum, ohne Feiertage
   const absenceDatesFor=(userId,dateFrom,dateTo)=>{
     const holidaySet=new Set(holidays.map(h=>h.date));
-    const dates=[],skipped=[];
+    const existingSet=new Set(absences.filter(a=>a.user_id===userId).map(a=>a.date));
+    const dates=[],skipped=[],duplicates=[];
     for(let d=new Date(dateFrom+"T12:00:00");fmtYMD(d)<=dateTo;d.setDate(d.getDate()+1)){
       const wd=parseWorkDays(getPensumForMonth(userId,d.getMonth(),d.getFullYear())?.work_days);
       if(!wd.includes(d.getDay()||7))continue;
       const ds=fmtYMD(d);
-      if(holidaySet.has(ds))skipped.push(ds);else dates.push(ds);
+      if(holidaySet.has(ds))skipped.push(ds);else if(existingSet.has(ds))duplicates.push(ds);else dates.push(ds);
     }
-    return{dates,skipped};
+    return{dates,skipped,duplicates};
   };
 
   const calcVacBalance=useCallback((userId)=>{
@@ -1310,6 +1311,17 @@ export default function App(){
   },[users,entries,absences,calcSollIst,getPensumForMonth]);
 
   const myEntries=useMemo(()=>entries.filter(e=>e.employee_id===currentUser?.id),[entries,currentUser]);
+  // Jahre mit Daten von Festangestellten, für die keine Feiertage geladen sind
+  const missingHolidayYears=useMemo(()=>{
+    const salariedIds=new Set(users.filter(u=>u.employment_type==="salaried").map(u=>u.id));
+    if(!salariedIds.size)return[];
+    const dates=[...entries.filter(e=>salariedIds.has(e.employee_id)).map(e=>e.date),...absences.filter(a=>salariedIds.has(a.user_id)).map(a=>a.date),...users.filter(u=>salariedIds.has(u.id)&&u.start_date).map(u=>u.start_date)];
+    const curY=new Date().getFullYear();
+    const minY=dates.length?Math.min(curY,...dates.map(d=>parseInt(d.substring(0,4)))):curY;
+    const loaded=new Set(holidays.map(h=>parseInt(h.date.substring(0,4))));
+    const missing=[];for(let y=minY;y<=curY;y++)if(!loaded.has(y))missing.push(y);
+    return missing;
+  },[users,entries,absences,holidays]);
   const dayTotal=useMemo(()=>myEntries.filter(e=>e.date===inlineForm.date).reduce((s,e)=>s+e.total_min,0),[myEntries,inlineForm.date]);
 
   const filteredEntries=useMemo(()=>{
@@ -1557,10 +1569,10 @@ export default function App(){
                     <button className="btn btn-primary" style={{flexShrink:0,padding:"11px 20px"}} onClick={addAbsence} disabled={absenceSaving}>{absenceSaving?"…":"+ Erfassen"}</button>
                   </div>
                   {absenceForm.dateFrom&&absenceForm.dateTo&&absenceForm.dateTo>=absenceForm.dateFrom&&(()=>{
-                    const {dates,skipped}=absenceDatesFor(currentUser.id,absenceForm.dateFrom,absenceForm.dateTo);
-                    if(!skipped.length&&absenceForm.dateTo===absenceForm.dateFrom)return null;
+                    const {dates,skipped,duplicates}=absenceDatesFor(currentUser.id,absenceForm.dateFrom,absenceForm.dateTo);
+                    if(!skipped.length&&!duplicates.length&&absenceForm.dateTo===absenceForm.dateFrom)return null;
                     const fmtDM=ds=>`${parseInt(ds.substring(8,10))}.${parseInt(ds.substring(5,7))}.`;
-                    return<div style={{fontSize:12,color:"#8890b8",marginTop:4}}>→ {dates.length} Arbeitstag{dates.length!==1?"e":""} werden erfasst{skipped.length>0&&<span style={{color:"#ffbe32"}}> ({skipped.length} Feiertag{skipped.length!==1?"e":""} übersprungen: {skipped.map(fmtDM).join(", ")})</span>}</div>;
+                    return<div style={{fontSize:12,color:"#8890b8",marginTop:4}}>→ {dates.length} Arbeitstag{dates.length!==1?"e":""} werden erfasst{skipped.length>0&&<span style={{color:"#ffbe32"}}> · {skipped.length} Feiertag{skipped.length!==1?"e":""} übersprungen: {skipped.map(fmtDM).join(", ")}</span>}{duplicates.length>0&&<span style={{color:"#ffbe32"}}> · {duplicates.length} bereits erfasst: {duplicates.map(fmtDM).join(", ")}</span>}</div>;
                   })()}
                 </div>
                 {myAbsences.length>0&&<div className="card" style={{padding:0,overflow:"hidden"}}>
@@ -1659,6 +1671,7 @@ export default function App(){
               return(
                 <div className="card" style={{marginBottom:16}}>
                   <div className="section-title">Übersicht Festangestellte — {periodLabel}</div>
+                  {missingHolidayYears.length>0&&<div className="msg-error" style={{marginBottom:12}}>Für {missingHolidayYears.join(", ")} sind keine Feiertage geladen – das Soll ist dort zu hoch. {isAdmin?"Unter Verwaltung → Feiertage laden.":"Bitte Admin informieren."}</div>}
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse"}}>
                       <thead><tr style={{fontSize:11,color:"#8890b8",textTransform:"uppercase",letterSpacing:".06em"}}>
@@ -1667,7 +1680,7 @@ export default function App(){
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Soll Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Periode</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Saldo bis heute</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}} title="Heute zählt erst, sobald für heute etwas erfasst ist">Saldo bis heute</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Anspruch</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Rest</th>
@@ -1675,8 +1688,11 @@ export default function App(){
                       <tbody>{relevant.map(u=>{
                         const bal=calcVacBalance(u.id);
                         // Kumuliert immer bis heute — unabhängig vom Filter
-                        const nowD=new Date();
-                        const rb=calcRunningBalance(u.id,nowD.getMonth(),nowD.getFullYear(),nowD.getDate());
+                        // Heute zählt erst, wenn für heute schon etwas erfasst ist – sonst bis gestern
+                        const todayS=todayStr();
+                        const hasToday=entries.some(e=>e.employee_id===u.id&&e.date===todayS)||absences.some(a=>a.user_id===u.id&&a.date===todayS);
+                        const until=new Date();if(!hasToday)until.setDate(until.getDate()-1);
+                        const rb=calcRunningBalance(u.id,until.getMonth(),until.getFullYear(),until.getDate());
                         if(!bal&&!rb)return null;
                         // Soll/Ist für den gewählten Zeitraum (Von–Bis) summieren
                         const fYM=toYM(fromYear,fromMonth),tYM=toYM(curY,curM);
@@ -1899,11 +1915,12 @@ export default function App(){
                 <div className="section-title">Feiertage Luzern</div>
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
                   <select className="input" style={{width:"auto"}} value={holidayYear} onChange={e=>setHolidayYear(+e.target.value)}>
-                    {[...Array(5)].map((_,i)=>{const y=new Date().getFullYear()-1+i;return<option key={y} value={y}>{y}</option>;})}
+                    {[...new Set([...missingHolidayYears,...[...Array(5)].map((_,i)=>new Date().getFullYear()-1+i)])].sort().map(y=><option key={y} value={y}>{y}{missingHolidayYears.includes(y)?" ⚠":""}</option>)}
                   </select>
                   <button className="btn btn-primary" style={{padding:"9px 16px",fontSize:13}} onClick={()=>fetchHolidays(holidayYear)}>↻ Feiertage laden</button>
                   <span style={{fontSize:12,color:"#8890b8"}}>{holidays.filter(h=>h.year===holidayYear).length} Einträge für {holidayYear}</span>
                 </div>
+                {missingHolidayYears.length>0&&<div className="msg-error" style={{marginBottom:16}}>Feiertage fehlen für: <b>{missingHolidayYears.join(", ")}</b>. Jahr oben wählen und „Feiertage laden“ klicken.</div>}
                 {(()=>{
                   const holidayDates=new Set(holidays.map(h=>h.date));
                   const onHoliday=absences.filter(a=>a.type==="frei"&&holidayDates.has(a.date));
