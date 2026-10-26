@@ -1234,25 +1234,27 @@ export default function App(){
     const startY=user.start_date?parseInt(user.start_date.substring(0,4)):(allDates.length>0?Math.min(...allDates.map(d=>parseInt(d.substring(0,4)))):curYear);
     const startM=user.start_date?parseInt(user.start_date.substring(5,7))-1:0;
     const startD=user.start_date?parseInt(user.start_date.substring(8,10)):1;
-    // Anspruch fürs ganze laufende Jahr (bis Dezember), inkl. geplanter Pensum-Wechsel
-    let totalDays=0;
-    for(let y=startY;y<=curYear;y++){
+    const vacFullTime=parseFloat(user.vacation_days_per_year||25);
+    // Anspruch eines Jahres, monatlich nach Pensum; im Eintrittsmonat anteilig nach Tagen
+    const entitlementOf=y=>{
+      if(y<startY)return 0;
+      let days=0;
       for(let mo=y===startY?startM:0;mo<12;mo++){
-        const pm=getPensumForMonth(userId,mo,y);
-        const pensum=parseWorkDays(pm?.work_days||user.work_days).length/5;
+        const pensum=parseWorkDays(getPensumForMonth(userId,mo,y)?.work_days||user.work_days).length/5;
         const daysInMonth=new Date(y,mo+1,0).getDate();
         const share=y===startY&&mo===startM?(daysInMonth-startD+1)/daysInMonth:1;
-        totalDays+=parseFloat(user.vacation_days_per_year||25)*pensum/12*share;
+        days+=vacFullTime*pensum/12*share;
       }
-    }
-    const pmNow=getPensumForMonth(userId,new Date().getMonth(),curYear);
-    const wdNow=parseWorkDays(pmNow?.work_days||user.work_days);
-    const pensumNow=wdNow.length/5;
-    const usedFrei=absences.filter(a=>a.user_id===userId&&a.type==="frei").length;
-    const sickDays=absences.filter(a=>a.user_id===userId&&a.type==="krank").length;
-    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear&&isWeekdayHoliday(h)).length*pensumNow;
-    const vacPerYear=parseFloat(user.vacation_days_per_year||25)*pensumNow;
-    return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear};
+      return days;
+    };
+    const myFerien=absences.filter(a=>a.user_id===userId&&a.type==="frei");
+    let entitledBefore=0;for(let y=startY;y<curYear;y++)entitledBefore+=entitlementOf(y);
+    const usedBefore=myFerien.filter(a=>a.date<`${curYear}-01-01`).length;
+    const carryOver=entitledBefore-usedBefore;
+    const entitlement=entitlementOf(curYear);
+    const used=myFerien.filter(a=>a.date.startsWith(String(curYear))).length;
+    const sick=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(String(curYear))).length;
+    return{year:curYear,carryOver,entitlement,available:carryOver+entitlement,used,remaining:carryOver+entitlement-used,sick};
   },[users,absences,holidays,entries,getPensumForMonth]);
 
   const calcSollIst=useCallback((userId,month,year,cutoffDay=null)=>{
@@ -1541,16 +1543,16 @@ export default function App(){
                 <h2 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#9aa2c8",letterSpacing:".05em",textTransform:"uppercase",marginTop:24}}>Abwesenheiten</h2>
                 {isSalaried&&bal&&(
                   <div className="balance-box" style={{marginBottom:16}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#9aa2c8",letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Ferienguthaben (rollend)</div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch total (kumuliert)</span><strong>{bal.total.toFixed(1)} Tage</strong></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Davon Ferientage/Jahr</span><span>{bal.vacPerYear.toFixed(1)} Tage × {new Date().getFullYear()-Math.max(0,new Date().getFullYear()-1)+1} Jahr(e)</span></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Feiertage {new Date().getFullYear()} (auf Arbeitstagen)</span><span>{bal.holidayDaysThisYear.toFixed(1)} Tage</span></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen (Ferien)</span><span style={{color:"#ff6b85"}}>−{bal.used.toFixed(1)} Tage</span></div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#9aa2c8",letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Ferien {bal.year}</div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Übertrag aus Vorjahr</span><span>{bal.carryOver.toFixed(1)} Tage</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch {bal.year} (ganzes Jahr, nach Pensum)</span><span>+{bal.entitlement.toFixed(1)} Tage</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Total verfügbar</span><strong>{bal.available.toFixed(1)} Tage</strong></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen / geplant {bal.year}</span><span style={{color:"#ff6b85"}}>−{bal.used.toFixed(1)} Tage</span></div>
                     <div style={{borderTop:"1px solid rgba(79,93,232,0.2)",paddingTop:8,marginTop:4}} className="balance-row">
                       <span style={{fontWeight:700}}>Verbleibend</span>
                       <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa",fontSize:16}}>{bal.remaining.toFixed(1)} Tage</strong>
                     </div>
-                    {bal.sick>0&&<div className="balance-row"><span style={{color:"#8890b8"}}>Kranktage total</span><span>{bal.sick} Tage</span></div>}
+                    {bal.sick>0&&<div className="balance-row"><span style={{color:"#8890b8"}}>Kranktage {bal.year}</span><span>{bal.sick} Tage</span></div>}
                   </div>
                 )}
                 <div className="card" style={{marginBottom:12}}>
@@ -1680,7 +1682,7 @@ export default function App(){
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Periode</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}} title="Heute zählt erst, sobald für heute etwas erfasst ist">Saldo bis heute</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Anspruch</th>
+                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien {new Date().getFullYear()}</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
                         <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Rest</th>
                       </tr></thead>
@@ -1706,7 +1708,7 @@ export default function App(){
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:cumColor}}>{rb?(rb.cumulativeDiff>=0?"+":"-")+fmtTime(Math.abs(rb.cumulativeDiff)):"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal?bal.total.toFixed(1)+" T":"—"}</td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal?<>{bal.available.toFixed(1)} T<div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{bal.entitlement.toFixed(1)} + {bal.carryOver.toFixed(1)} Vorjahr</div></>:"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal?bal.used.toFixed(1)+" T":"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal?(bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"):"#8890b8"}}>{bal?bal.remaining.toFixed(1)+" T":"—"}</td>
                         </tr>);
@@ -1790,7 +1792,7 @@ export default function App(){
                   if(!bal)return null;
                   return(
                     <div style={{padding:"12px 16px",borderTop:"1px solid #1e2235",display:"flex",gap:24,flexWrap:"wrap"}}>
-                      <div style={{fontSize:12,color:"#8890b8"}}>Ferienguthaben: <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining.toFixed(1)} Tage verbleibend</strong> ({bal.used}/{bal.total.toFixed(1)} bezogen)</div>
+                      <div style={{fontSize:12,color:"#8890b8"}}>Ferienguthaben: <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining.toFixed(1)} Tage verbleibend</strong> ({bal.used} von {bal.available.toFixed(1)} bezogen, inkl. {bal.carryOver.toFixed(1)} Übertrag)</div>
                       {monthAbsences.length>0&&<div style={{fontSize:12,color:"#8890b8"}}>Abwesenheiten {MONTHS[abschlussMonth]}: {monthAbsences.filter(a=>a.type==="frei").length} Ferien,{monthAbsences.filter(a=>a.type==="krank").length} Krank</div>}
                     </div>
                   );
