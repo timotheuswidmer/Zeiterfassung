@@ -123,7 +123,8 @@ const CSS = `
   .badge-krank{background:rgba(255,107,133,0.12);color:#ff6b85;border:1px solid rgba(255,107,133,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;}
   .badge-unbezahlt{background:rgba(255,190,50,0.12);color:#ffbe32;border:1px solid rgba(255,190,50,0.25);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;display:inline-block;}
   .balance-box{background:rgba(79,93,232,0.08);border:1px solid rgba(79,93,232,0.2);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:8px;}
-  .balance-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+  .balance-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;gap:12px;}
+  .balance-row>*:last-child{white-space:nowrap;}
   .soll-ist-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
   .sw-dot{width:8px;height:8px;border-radius:50%;background:#4dffaa;animation:pulse 1s infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
@@ -157,8 +158,60 @@ const CSS = `
   .mobile-nav-btn{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;color:#8890b8;font-size:10px;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .18s;}
   .mobile-nav-btn.active{color:#7c8bff;background:rgba(79,93,232,0.12);}
   .mobile-nav-btn .icon{font-size:20px;line-height:1;}
+  .export-btn-group{display:flex;gap:8px;flex-wrap:wrap;}
+  .grid-2>*,.grid-3>*,.filter-group{min-width:0;}
+  select.input{min-width:0;max-width:100%;text-overflow:ellipsis;}
+  .stat-row>div:first-child{flex:0 1 auto;max-width:45%;}
+  .abschluss-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px;}
+  .kpi{background:rgba(10,12,19,0.6);border:1px solid #1e2235;border-radius:10px;padding:8px 12px;}
+  .kpi-label{font-size:10px;font-weight:700;color:#8890b8;text-transform:uppercase;letter-spacing:.08em;}
+  .kpi-val{font-family:'DM Mono',monospace;font-size:14px;margin-top:2px;}
+  .ov-table th{text-align:right;padding:6px 8px;font-size:10px;}
+  .ov-table th:first-child{text-align:left;}
+  .ov-table td{text-align:right;padding:8px;font-family:'DM Mono',monospace;font-size:12px;border-top:1px solid #1e2235;}
+  .ov-table td.cell-title{text-align:left;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;}
+  .ov-groups th{text-align:center!important;font-size:9px;color:#5a6090;border-bottom:none;padding-bottom:0;}
+  .ov-groups th:not(:first-child){border-left:1px solid #1e2235;}
+  .cell-sub{font-size:10px;color:#8890b8;font-family:'DM Sans',sans-serif;margin-top:2px;}
+  .show-mobile-inline{display:none;}
   @media(max-width:680px){
     .grid-2,.grid-3{grid-template-columns:1fr;}
+    .input{font-size:16px;}
+    .main-content{padding:16px 12px 90px!important;}
+    .stopwatch-display{font-size:36px;}
+    .modal-bg{padding:0;align-items:flex-end;}
+    .modal{max-width:none!important;border-radius:20px 20px 0 0;max-height:92dvh;}
+    .mgmt-list-item,.user-row{flex-wrap:wrap;}
+    .show-mobile-inline{display:inline;}
+    .range-sep{display:none;}
+    .stat-row{flex-wrap:wrap;gap:4px 12px;}
+    .stat-row>div:first-child{flex:1 1 100%;max-width:100%;min-width:0!important;}
+    .summary-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px;}
+    .summary-grid .summary-box{padding:10px 12px;}
+    .summary-grid .big-num{font-size:17px;}
+    table.table-cards{display:block;padding:10px;}
+    table.table-cards thead{display:none;}
+    table.table-cards tbody,table.table-cards tr,table.table-cards td{display:block;width:100%;}
+    table.table-cards tr{border:1px solid #1e2235;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:rgba(10,12,19,0.4);}
+    table.table-cards tr:last-child{margin-bottom:0;}
+    table.table-cards td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0!important;border:none!important;text-align:right!important;max-width:none!important;white-space:normal!important;}
+    table.table-cards td[data-label]::before{content:attr(data-label);font-size:11px;color:#8890b8;font-family:'DM Sans',sans-serif;font-weight:600;text-align:left;flex-shrink:0;}
+    table.table-cards td.cell-title{justify-content:flex-start;text-align:left!important;font-size:14px;font-weight:700;padding-bottom:6px!important;}
+    table.table-cards td.cell-actions{justify-content:flex-end;padding-top:6px!important;}
+    table.table-cards td.hide-mobile{display:none!important;}
+    tbody tr:hover td{background:none;}
+    table.entry-cards tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
+    table.entry-cards td{display:block;width:auto;padding:0!important;text-align:left!important;}
+    table.entry-cards td[data-label]::before{display:none;}
+    table.entry-cards td.cell-title{order:1;flex:1 1 auto;padding:0!important;font-size:13px;}
+    table.entry-cards td[data-label="Zeit"],table.entry-cards td[data-label="Typ"]{order:2;}
+    table.entry-cards td.cell-actions{order:3;padding:0!important;}
+    table.entry-cards td.cell-actions .btn-danger,table.entry-cards td.cell-actions .btn-edit{padding:4px 9px;}
+    table.entry-cards tr::before{content:"";order:4;flex-basis:100%;height:0;margin:-3px 0;}
+    table.entry-cards td[data-label="Projekt"]{order:5;}
+    table.entry-cards td[data-label="Tätigkeit"]{order:6;font-size:13px;}
+    table.entry-cards td[data-label="Bemerkung"]{order:7;flex-basis:100%;font-size:12px;}
     .hide-mobile{display:none!important;}
     .main-content{padding-bottom:90px!important;}
     .mobile-nav{display:flex;}
@@ -185,6 +238,16 @@ const fmtFileRange = (fromYear,fromMonth,toYear,toMonth) => {
   return f===t ? f : `${f}-${t}`;
 };
 const pad2 = n => String(n).padStart(2,"0");
+const validateTime = (hours,minutes) => {
+  const h=parseInt(hours||0),m=parseInt(minutes||0);
+  if(isNaN(h)||isNaN(m)||h<0||m<0)return "Bitte gültige Zeit eingeben.";
+  if(m>59)return "Minuten müssen zwischen 0 und 59 liegen.";
+  if(h*60+m<=0)return "Zeit muss grösser als 0 sein.";
+  if(h*60+m>24*60)return "Ein Eintrag kann höchstens 24 Stunden dauern.";
+  return null;
+};
+// Passwort nie im Browser speichern
+const storeSession = u => { try{ const {password,...safe}=u; sessionStorage.setItem("ze_session",JSON.stringify(safe)); }catch{} };
 const fmtYMD = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 const parseWD = wd => (wd||"1,2,3,4,5").split(",").filter(Boolean).map(Number);
 // Nur Feiertage Mo–Fr reduzieren das Soll
@@ -247,25 +310,30 @@ async function exportMonatsabschlussExcel({abschlussPerEmp,abschlussMonth,abschl
   const label=`${MONTHS[abschlussMonth]} ${abschlussYear}`;
   const totalAll=abschlussPerEmp.reduce((s,e)=>s+e.totalMin,0);
 
-  // Tab 1: Zusammenfassung aller Mitarbeitenden
+  // Tab 1: Zusammenfassung aller Mitarbeitenden inkl. Soll/Ist/Saldo und Abwesenheiten
+  const h2=min=>min==null?"":Math.round(min/60*100)/100;
+  const hdrs=["Mitarbeiter","Einträge","Erfasst (h)","Soll (h)","Ist (h)","± Monat (h)","Saldo kum. (h)","Ferien (T)","Krank (T)","Unbezahlt (T)","Ferien Rest (T)"];
   const sumRows=[
-    [sc(`Monatsabschluss — ${label}`,ST.title(14)),"","","",""],
-    ["","","","",""],
-    [sc("Mitarbeiter",ST.hdr()),sc("Einträge",ST.hdr()),sc("Stunden",ST.hdr()),sc("Min",ST.hdr()),sc("Std (Dez.)",ST.hdr())],
-    ...abschlussPerEmp.map(({name,totalMin,entries},i)=>{
-      const bg=i%2===0?merge(ST.cell(),...[ST.alt]):{};
-      return [sc(name,i%2===0?merge(ST.cell(false,"left"),ST.alt):ST.cell()),sc(entries.length,i%2===0?merge(ST.num,ST.alt):ST.num),sc(Math.floor(totalMin/60),i%2===0?merge(ST.num,ST.alt):ST.num),sc(totalMin%60,i%2===0?merge(ST.num,ST.alt):ST.num),sc(parseFloat(fmtDecimal(totalMin)),i%2===0?merge(ST.num,ST.alt):ST.num)];
+    [sc(`Monatsabschluss — ${label}`,ST.title(14)),...Array(hdrs.length-1).fill("")],
+    Array(hdrs.length).fill(""),
+    hdrs.map(h=>sc(h,ST.hdr())),
+    ...abschlussPerEmp.map(({name,totalMin,entries,si,rb,vac,absCount},i)=>{
+      const alt=i%2===0;const c=st=>alt?merge(st,ST.alt):st;
+      return [sc(name,c(ST.cell())),sc(entries.length,c(ST.num)),sc(h2(totalMin),c(ST.num)),sc(h2(si?.sollMin),c(ST.num)),sc(h2(si?.istMin),c(ST.num)),sc(h2(si?.diff),c(ST.num)),sc(h2(rb?.cumulativeDiff),c(ST.num)),sc(si?absCount.ferien:"",c(ST.num)),sc(si?absCount.krank:"",c(ST.num)),sc(si?absCount.unbezahlt:"",c(ST.num)),sc(vac?Math.round(vac.remaining*10)/10:"",c(ST.num))];
     }),
-    ["","","","",""],
-    [sc("TOTAL",ST.totalLbl),sc(abschlussPerEmp.reduce((s,e)=>s+e.entries.length,0),ST.total),sc(Math.floor(totalAll/60),ST.total),sc(totalAll%60,ST.total),sc(parseFloat(fmtDecimal(totalAll)),ST.total)],
+    Array(hdrs.length).fill(""),
+    [sc("TOTAL",ST.totalLbl),sc(abschlussPerEmp.reduce((s,e)=>s+e.entries.length,0),ST.total),sc(h2(totalAll),ST.total),...Array(hdrs.length-3).fill(sc("",ST.total))],
+    Array(hdrs.length).fill(""),
+    [sc("Soll/Ist/Saldo nur für Festangestellte. Ist = erfasste Stunden + Ferien/Krank zum Tagessoll.",ST.meta),...Array(hdrs.length-1).fill("")],
   ];
   const sumWs=XLSX.utils.aoa_to_sheet(sumRows);
-  sumWs["!cols"]=[{wch:28},{wch:11},{wch:11},{wch:8},{wch:14}];
-  sumWs["!merges"]=[{s:{r:0,c:0},e:{r:0,c:4}}];
+  sumWs["!cols"]=[{wch:26},{wch:9},{wch:11},{wch:10},{wch:10},{wch:12},{wch:14},{wch:10},{wch:9},{wch:12},{wch:14}];
+  sumWs["!merges"]=[{s:{r:0,c:0},e:{r:0,c:hdrs.length-1}}];
+  sumWs["!pageSetup"]={paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0};
   XLSX.utils.book_append_sheet(wb,sumWs,"Zusammenfassung");
 
   // Tab pro Mitarbeitender — druckfertig A4
-  abschlussPerEmp.forEach(({name,totalMin,entries:empE})=>{
+  abschlussPerEmp.forEach(({name,totalMin,entries:empE,si,rb,absCount})=>{
     const sorted=[...empE].sort((a,b)=>a.date.localeCompare(b.date));
     const dataRows=sorted.map((e,i)=>{
       const isAlt=i%2===0;
@@ -289,6 +357,11 @@ async function exportMonatsabschlussExcel({abschlussPerEmp,abschlussMonth,abschl
       ["","","","","","",""],
       [sc("",ST.totalLbl),sc("",ST.total),sc("TOTAL",ST.totalLbl),sc(Math.floor(totalMin/60),ST.total),sc(totalMin%60,ST.total),sc(parseFloat(fmtDecimal(totalMin)),{...ST.total,font:{bold:true,sz:12,name:"Arial",color:{rgb:"1F3864"}}}),sc("",ST.total)],
       ["","","","","","",""],
+      ...(si?[
+        [sc(`Soll ${fmtTime(si.sollMin)} · Ist ${fmtTime(si.istMin)} · ± Monat ${si.diff>=0?"+":"−"}${fmtTime(Math.abs(si.diff))}${rb?` · Saldo kumuliert ${rb.cumulativeDiff>=0?"+":"−"}${fmtTime(Math.abs(rb.cumulativeDiff))}`:""}`,ST.meta),"","","","","",""],
+        [sc(`Abwesenheiten: ${absCount.ferien} Ferien · ${absCount.krank} Krank · ${absCount.unbezahlt} Unbezahlt`,ST.meta),"","","","","",""],
+        ["","","","","","",""],
+      ]:[]),
       [sc("Unterschrift Mitarbeiter/in:",ST.meta),"","",sc("Unterschrift Vorgesetzte/r:",ST.meta),"","",""],
       ["","","","","","",""],
       [sc("________________________________",ST.meta),"","",sc("________________________________",ST.meta),"","",""],
@@ -679,8 +752,9 @@ function EntryModal({existing,projects,activities,products,onSave,onClose,onStar
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const save=async()=>{
     if(!form.project||!form.activity||(!form.hours&&!form.minutes)){setErr("Bitte Projekt, Tätigkeit und Zeit ausfüllen.");return;}
+    const timeErr=validateTime(form.hours,form.minutes);
+    if(timeErr){setErr(timeErr);return;}
     let totalMin=(parseInt(form.hours||0)*60)+parseInt(form.minutes||0);
-    if(totalMin<=0){setErr("Zeit muss grösser als 0 sein.");return;}
     // Timer nur einrechnen, wenn er zu genau diesem Eintrag gehört
     if(timerLinked){const elapsed=await swStopClean();totalMin+=Math.round(elapsed/60);}
     setSaving(true);try{await onSave({...form,totalMin});}catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
@@ -829,7 +903,7 @@ function PwModal({onSave,onClose}){
 // ─── Hauptapp ─────────────────────────────────────────────────────────────────
 export default function App(){
   const isConfigured=SUPABASE_URL!=="DEINE_SUPABASE_URL"&&SUPABASE_ANON_KEY!=="DEIN_SUPABASE_ANON_KEY";
-  const [currentUser,setCurrentUser]=useState(()=>{try{const s=sessionStorage.getItem("ze_session");return s?JSON.parse(s):null;}catch{return null;}});
+  const [currentUser,setCurrentUser]=useState(()=>{try{const s=sessionStorage.getItem("ze_session");if(!s)return null;const u=JSON.parse(s);if(u.password){storeSession(u);delete u.password;}return u;}catch{return null;}});
   const [view,setView]=useState(()=>currentUser?.role==="admin"?"auswertung":"eintragen");
   const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]); const [products,setProducts]=useState([]);
   const [projectBudgets,setProjectBudgets]=useState({}); // {name: budget_hours|null}
@@ -1053,7 +1127,7 @@ export default function App(){
   },[currentUser,isConfigured]);
 
   useEffect(()=>{if(currentUser&&isConfigured)loadData();},[loadData]);
-  const login=(u)=>{setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}setView(u.role==="admin"?"auswertung":"eintragen");};
+  const login=(u)=>{const {password,...safe}=u;setCurrentUser(safe);storeSession(u);setView(u.role==="admin"?"auswertung":"eintragen");};
   const logout=()=>{setCurrentUser(null);setDataReady(false);try{sessionStorage.removeItem("ze_session");}catch{}};
 
   const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
@@ -1063,8 +1137,9 @@ export default function App(){
   };
   const submitInlineForm=async()=>{
     if(!inlineForm.project||!inlineForm.activity||(!inlineForm.hours&&!inlineForm.minutes)){setFormMsg({type:"error",text:"Bitte Projekt, Tätigkeit und Zeit ausfüllen."});return;}
+    const timeErr=validateTime(inlineForm.hours,inlineForm.minutes);
+    if(timeErr){setFormMsg({type:"error",text:timeErr});return;}
     const totalMin=(parseInt(inlineForm.hours||0)*60)+parseInt(inlineForm.minutes||0);
-    if(totalMin<=0){setFormMsg({type:"error",text:"Zeit muss grösser als 0 sein."});return;}
     setInlineSaving(true);
     try{
       if(inlineEditId){
@@ -1083,9 +1158,10 @@ export default function App(){
     finally{setInlineSaving(false);}
   };
   const changePassword=async(oldPw,newPw)=>{
-    if(currentUser.password!==oldPw)throw new Error("Aktuelles Passwort ist falsch.");
+    const rows=await sb.select("users",`?id=eq.${currentUser.id}&select=password`);
+    if(!rows.length||rows[0].password!==oldPw)throw new Error("Aktuelles Passwort ist falsch.");
     const updated=await sb.update("users",currentUser.id,{password:newPw});
-    const u=updated[0];setCurrentUser(u);try{sessionStorage.setItem("ze_session",JSON.stringify(u));}catch{}
+    const {password,...safe}=updated[0];setCurrentUser(safe);storeSession(updated[0]);
   };
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
   const renameProject=async()=>{
@@ -1144,18 +1220,18 @@ export default function App(){
     try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.update("projects",r[0].id,{budget_hours:val});setProjectBudgets(prev=>({...prev,[name]:val}));}catch(e){alert("Fehler: "+e.message);}
   };
   const addProject=async()=>{if(!newProject.trim())return;try{await sb.insert("projects",{name:newProject.trim()});setProjects(prev=>[...prev,newProject.trim()].sort());setNewProject("");}catch(e){alert("Fehler: "+e.message);}};
-  const removeProject=async(name)=>{try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("projects",r[0].id);setProjects(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
+  const removeProject=async(name)=>{const n=entries.filter(e=>e.project===name).length;if(!window.confirm(`Projekt "${name}" entfernen?${n?`\n\n${n} bestehende Einträge behalten den Projektnamen. Zum Ausblenden besser „Archivieren“ verwenden.`:""}`))return;try{const r=await sb.select("projects",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("projects",r[0].id);setProjects(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const addActivity=async()=>{if(!newActivity.trim())return;try{await sb.insert("activities",{name:newActivity.trim()});setActivities(prev=>[...prev,newActivity.trim()].sort());setNewActivity("");}catch(e){alert("Fehler: "+e.message);}};
-  const removeActivity=async(name)=>{try{const r=await sb.select("activities",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("activities",r[0].id);setActivities(prev=>prev.filter(a=>a!==name));}catch(e){alert("Fehler: "+e.message);}};
+  const removeActivity=async(name)=>{if(!window.confirm(`Tätigkeit "${name}" entfernen?`))return;try{const r=await sb.select("activities",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("activities",r[0].id);setActivities(prev=>prev.filter(a=>a!==name));}catch(e){alert("Fehler: "+e.message);}};
   const addProduct=async()=>{if(!newProduct.trim())return;try{await sb.insert("products",{name:newProduct.trim()});setProducts(prev=>[...prev,newProduct.trim()].sort());setNewProduct("");}catch(e){alert("Fehler: "+e.message);}};
-  const removeProduct=async(name)=>{try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
+  const removeProduct=async(name)=>{if(!window.confirm(`Produkt "${name}" entfernen?`))return;try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const saveUser=async(data)=>{
     const base={name:data.name,username:data.username,role:data.role,employment_type:data.employment_type||"hourly",start_date:data.start_date||null,vacation_days_per_year:data.vacation_days_per_year||25,...(data.startPensum?{daily_hours:data.startPensum.daily_hours,work_days:data.startPensum.work_days}:{})};
     let userId;
     if(userModal&&userModal!=="new"){
       const updated=await sb.update("users",userModal.id,{...base,password:data.password||userModal.password});
       setUsers(prev=>prev.map(u=>u.id===userModal.id?updated[0]:u));
-      if(currentUser.id===userModal.id){const f=updated[0];setCurrentUser(f);try{sessionStorage.setItem("ze_session",JSON.stringify(f));}catch{}}
+      if(currentUser.id===userModal.id){const {password,...safe}=updated[0];setCurrentUser(safe);storeSession(updated[0]);}
       userId=userModal.id;
     }else{
       const c=await sb.insert("users",{...base,password:data.password});
@@ -1182,7 +1258,7 @@ export default function App(){
   const addHoliday=async(date,name,year)=>{
     try{const r=await sb.insert("holidays",{date,name,year});setHolidays(prev=>[...prev,r[0]].sort((a,b)=>a.date.localeCompare(b.date)));}catch(e){alert("Fehler: "+e.message);}
   };
-  const deleteHoliday=async(id)=>{try{await sb.remove("holidays",id);setHolidays(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+  const deleteHoliday=async(id)=>{if(!window.confirm("Feiertag löschen?"))return;try{await sb.remove("holidays",id);setHolidays(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}};
   const addAbsence=async()=>{
     if(!absenceForm.dateFrom||!absenceForm.dateTo)return;
     setAbsenceSaving(true);
@@ -1199,7 +1275,7 @@ export default function App(){
   const addAbsenceForUser=async(userId,date,type,note)=>{
     try{const r=await sb.insert("absences",{user_id:userId,date,type,note:note||null});setAbsences(prev=>[r[0],...prev]);}catch(e){alert("Fehler: "+e.message);}
   };
-  const deleteAbsence=async(id)=>{try{await sb.remove("absences",id);setAbsences(prev=>prev.filter(a=>a.id!==id));}catch(e){alert("Fehler: "+e.message);}};
+  const deleteAbsence=async(id)=>{if(!window.confirm("Abwesenheit löschen?"))return;try{await sb.remove("absences",id);setAbsences(prev=>prev.filter(a=>a.id!==id));}catch(e){alert("Fehler: "+e.message);}};
 
   // ─── Arbeitszeit-Helpers ───────────────────────────────────────────────────
   const parseWorkDays=parseWD;
@@ -1341,7 +1417,20 @@ export default function App(){
   const projectsInRange=useMemo(()=>[...new Set(filteredEntries.map(e=>e.project))].sort(),[filteredEntries]);
 
   const abschlussEntries=useMemo(()=>entries.filter(e=>{const d=new Date(e.date);return d.getMonth()===abschlussMonth&&d.getFullYear()===abschlussYear;}),[entries,abschlussMonth,abschlussYear]);
-  const abschlussPerEmp=useMemo(()=>{const map={};abschlussEntries.forEach(e=>{if(!map[e.employee_id])map[e.employee_id]={name:e.employee_name,totalMin:0,entries:[]};map[e.employee_id].totalMin+=e.total_min;map[e.employee_id].entries.push(e);});return Object.values(map).sort((a,b)=>b.totalMin-a.totalMin);},[abschlussEntries]);
+  // Alle mit Einträgen im Monat plus Festangestellte mit Soll (z.B. nur Ferien/Krank)
+  const abschlussPerEmp=useMemo(()=>{
+    const map={};
+    abschlussEntries.forEach(e=>{if(!map[e.employee_id])map[e.employee_id]={id:e.employee_id,name:e.employee_name,totalMin:0,entries:[]};map[e.employee_id].totalMin+=e.total_min;map[e.employee_id].entries.push(e);});
+    users.forEach(u=>{if(u.employment_type==="salaried"&&!map[u.id]&&calcSollIst(u.id,abschlussMonth,abschlussYear))map[u.id]={id:u.id,name:u.name,totalMin:0,entries:[]};});
+    const monthStr=`${abschlussYear}-${pad2(abschlussMonth+1)}`;
+    return Object.values(map).map(emp=>{
+      const u=users.find(x=>x.id===emp.id);
+      const si=calcSollIst(emp.id,abschlussMonth,abschlussYear);
+      const abs=absences.filter(a=>a.user_id===emp.id&&a.date.startsWith(monthStr));
+      return{...emp,name:u?.name||emp.name,si,rb:si?calcRunningBalance(emp.id,abschlussMonth,abschlussYear):null,vac:si?calcVacBalance(emp.id):null,
+        absCount:{ferien:abs.filter(a=>a.type==="frei").length,krank:abs.filter(a=>a.type==="krank").length,unbezahlt:abs.filter(a=>a.type==="unbezahlt").length}};
+    }).sort((a,b)=>b.totalMin-a.totalMin||a.name.localeCompare(b.name));
+  },[abschlussEntries,users,absences,abschlussMonth,abschlussYear,calcSollIst,calcRunningBalance,calcVacBalance]);
 
   const totalFiltered=filteredEntries.reduce((s,e)=>s+e.total_min,0);
   const maxStat=Math.max(...projectStats.map(s=>s[1]),1);
@@ -1448,9 +1537,11 @@ export default function App(){
                       const isWorkDay=wd.includes(dow);
                       const isHoliday=holidays.some(h=>h.date===inlineForm.date);
                       const beforeStart=u.start_date&&inlineForm.date<u.start_date;
-                      const sollMin=(isWorkDay&&!isHoliday&&!beforeStart)?Math.round(pm.daily_hours*60):0;
+                      const note=beforeStart?"Vor Eintritt – kein Soll":isHoliday?"Feiertag – anteilig im Monats-Soll berücksichtigt":!isWorkDay?"Kein Arbeitstag laut Pensum":null;
+                      if(note)return<div style={{fontSize:11,color:"#8890b8",marginTop:3}}>{note}</div>;
+                      const sollMin=Math.round(pm.daily_hours*60);
                       const diff=dayTotal-sollMin;
-                      return<div style={{fontSize:11,color:"#8890b8",marginTop:3}}>Soll: <span style={{color:"#9aa2c8",fontFamily:"'DM Mono',monospace"}}>{fmtTime(sollMin)}</span>{dayTotal>0&&sollMin>0&&<span style={{marginLeft:6,fontWeight:700,color:diff>=0?"#4dffaa":"#ff6b85"}}>{diff>=0?"+":""}{fmtTime(Math.abs(diff))}</span>}</div>;
+                      return<div style={{fontSize:11,color:"#8890b8",marginTop:3}}>Soll: <span style={{color:"#9aa2c8",fontFamily:"'DM Mono',monospace"}}>{fmtTime(sollMin)}</span>{dayTotal>0&&<span style={{marginLeft:6,fontWeight:700,color:diff>=0?"#4dffaa":"#ff6b85"}}>{diff>=0?"+":"−"}{fmtTime(Math.abs(diff))}</span>}</div>;
                     })()}
                   </div>
                 </div>
@@ -1515,17 +1606,17 @@ export default function App(){
             {/* Letzte Einträge */}
             <h2 style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#9aa2c8",letterSpacing:".05em",textTransform:"uppercase"}}>Meine letzten Einträge</h2>
             <div className="card" style={{padding:0,overflow:"hidden"}}>
-              <div className="table-wrap"><table>
-                <thead><tr><th>Datum</th><th>Projekt</th><th>Tätigkeit</th><th>Zeit</th><th className="hide-mobile">Bemerkung</th><th style={{textAlign:"right"}}>Aktionen</th></tr></thead>
+              <div className="table-wrap"><table className="table-cards entry-cards">
+                <thead><tr><th>Datum</th><th>Projekt</th><th>Tätigkeit</th><th>Zeit</th><th>Bemerkung</th><th style={{textAlign:"right"}}>Aktionen</th></tr></thead>
                 <tbody>
                   {myEntries.slice(0,30).map(e=>(
                     <tr key={e.id}>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{e.date}</td>
-                      <td><span className="chip chip-blue">{e.project}</span></td>
-                      <td style={{color:"#9aa2c8"}}>{e.activity}</td>
-                      <td><span className="chip">{fmtTime(e.total_min)}</span></td>
-                      <td className="hide-mobile" style={{color:"#8890b8",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note||"—"}</td>
-                      <td><div className="action-btns" style={{justifyContent:"flex-end"}}><button className="btn-edit" onClick={()=>setEntryModal(e)}>✎</button><button className="btn-danger" onClick={()=>deleteEntry(e.id)}>✕</button></div></td>
+                      <td className="cell-title" style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{e.date}</td>
+                      <td data-label="Projekt"><span className="chip chip-blue">{e.project}</span></td>
+                      <td data-label="Tätigkeit" style={{color:"#9aa2c8"}}>{e.activity}</td>
+                      <td data-label="Zeit"><span className="chip">{fmtTime(e.total_min)}</span></td>
+                      <td data-label="Bemerkung" className={e.note?"":"hide-mobile"} style={{color:"#8890b8",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.note||"—"}</td>
+                      <td className="cell-actions"><div className="action-btns" style={{justifyContent:"flex-end"}}><button className="btn-edit" onClick={()=>setEntryModal(e)}>✎</button><button className="btn-danger" onClick={()=>deleteEntry(e.id)}>✕</button></div></td>
                     </tr>
                   ))}
                   {myEntries.length===0&&<tr><td colSpan={6} style={{textAlign:"center",color:"#8890b8",padding:"32px 0"}}>Noch keine Einträge.</td></tr>}
@@ -1545,7 +1636,7 @@ export default function App(){
                   <div className="balance-box" style={{marginBottom:16}}>
                     <div style={{fontSize:12,fontWeight:700,color:"#9aa2c8",letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Ferien {bal.year}</div>
                     <div className="balance-row"><span style={{color:"#8890b8"}}>Übertrag aus Vorjahr</span><span>{bal.carryOver.toFixed(1)} Tage</span></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch {bal.year} (ganzes Jahr, nach Pensum)</span><span>+{bal.entitlement.toFixed(1)} Tage</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch {bal.year} (nach Pensum)</span><span>+{bal.entitlement.toFixed(1)} Tage</span></div>
                     <div className="balance-row"><span style={{color:"#8890b8"}}>Total verfügbar</span><strong>{bal.available.toFixed(1)} Tage</strong></div>
                     <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen / geplant {bal.year}</span><span style={{color:"#ff6b85"}}>−{bal.used.toFixed(1)} Tage</span></div>
                     <div style={{borderTop:"1px solid rgba(79,93,232,0.2)",paddingTop:8,marginTop:4}} className="balance-row">
@@ -1577,14 +1668,14 @@ export default function App(){
                   })()}
                 </div>
                 {myAbsences.length>0&&<div className="card" style={{padding:0,overflow:"hidden"}}>
-                  <div className="table-wrap"><table>
+                  <div className="table-wrap"><table className="table-cards entry-cards">
                     <thead><tr><th>Datum</th><th>Typ</th><th className="hide-mobile">Bemerkung</th><th style={{textAlign:"right"}}></th></tr></thead>
                     <tbody>{myAbsences.map(a=>(
                       <tr key={a.id}>
-                        <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{a.date}</td>
-                        <td><span className={a.type==="frei"?"badge-frei":a.type==="krank"?"badge-krank":"badge-unbezahlt"}>{a.type==="frei"?"Ferien":a.type==="krank"?"Krank":"Unbezahlt"}</span></td>
-                        <td className="hide-mobile" style={{color:"#8890b8"}}>{a.note||"—"}</td>
-                        <td style={{textAlign:"right"}}><button className="btn-danger" onClick={()=>deleteAbsence(a.id)}>✕</button></td>
+                        <td className="cell-title" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{a.date}</td>
+                        <td data-label="Typ"><span className={a.type==="frei"?"badge-frei":a.type==="krank"?"badge-krank":"badge-unbezahlt"}>{a.type==="frei"?"Ferien":a.type==="krank"?"Krank":"Unbezahlt"}</span></td>
+                        <td data-label="Bemerkung" className={a.note?"":"hide-mobile"} style={{color:"#8890b8"}}>{a.note||"—"}</td>
+                        <td className="cell-actions" style={{textAlign:"right"}}><button className="btn-danger" onClick={()=>deleteAbsence(a.id)}>✕</button></td>
                       </tr>
                     ))}</tbody>
                   </table></div>
@@ -1615,14 +1706,14 @@ export default function App(){
                 <div className="filter-group" style={{flex:"0 1 90px"}}><div className="filter-label">&nbsp;</div><select className="input" value={toYear} onChange={e=>setToYear(+e.target.value)}>{years.map(y=><option key={y}>{y}</option>)}</select></div>
               </div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:10}}>
-                {isAdmin&&<select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterEmployee} onChange={e=>setFilterEmployee(e.target.value)}><option value="alle">Alle Mitarbeiter</option>{users.filter(u=>u.role==="employee").map(u=><option key={u.id}>{u.name}</option>)}</select>}
-                <select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterProject} onChange={e=>setFilterProject(e.target.value)}><option value="alle">Alle Projekte</option>{projects.map(p=><option key={p}>{p}</option>)}</select>
+                {isAdmin&&<select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterEmployee} onChange={e=>setFilterEmployee(e.target.value)}><option value="alle">Alle Mitarbeiter</option>{users.map(u=><option key={u.id}>{u.name}</option>)}</select>}
+                <select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterProject} onChange={e=>setFilterProject(e.target.value)}><option value="alle">Alle Projekte</option>{projects.map(p=><option key={p}>{p}</option>)}{archivedProjects.length>0&&<optgroup label="Archiviert">{archivedProjects.map(p=><option key={p} value={p}>{p}</option>)}</optgroup>}</select>
                 <select className="input" style={{width:"auto",flex:"1 1 140px"}} value={filterActivity} onChange={e=>setFilterActivity(e.target.value)}><option value="alle">Alle Tätigkeiten</option>{activities.map(a=><option key={a}>{a}</option>)}</select>
                 <input className="input" style={{width:"auto",flex:"1 1 160px"}} placeholder="Bemerkung enthält…" value={filterNote} onChange={e=>setFilterNote(e.target.value)}/>
               </div>
             </div>
 
-            <div className="grid-3" style={{marginBottom:16}}>
+            <div className="grid-3 summary-grid" style={{marginBottom:16}}>
               {[["Gesamtzeit",fmtTime(totalFiltered)],["Einträge",filteredEntries.length],["Projekte",projectStats.length]].map(([label,val])=>(
                 <div key={label} className="summary-box"><div style={{color:"#8890b8",fontSize:10,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>{label}</div><div className="big-num">{val}</div></div>
               ))}
@@ -1642,7 +1733,7 @@ export default function App(){
                   <div key={name} className="stat-row">
                     <div style={{minWidth:90,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
                     <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
-                      <div className="bar-bg"><div className="bar-fill" style={{width:`${pct}%`,background:barColor}}/></div>
+                      <div className="bar-bg" style={{flex:"none"}}><div className="bar-fill" style={{width:`${pct}%`,background:barColor}}/></div>
                       {budgetMin&&<div style={{fontSize:10,color:over?"#ff4d6b":totalMin/budgetMin>0.8?"#ffbe32":"#4dffaa"}}>
                         {over?`+${fmtTime(totalMin-budgetMin)} überschritten`:`${fmtTime(budgetMin-totalMin)} verbleibend`}
                         <span style={{color:"#8890b8"}}> (gesamt: {fmtTime(totalMin)} / {budgetH}h)</span>
@@ -1674,21 +1765,29 @@ export default function App(){
                   <div className="section-title">Übersicht Festangestellte — {periodLabel}</div>
                   {missingHolidayYears.length>0&&<div className="msg-error" style={{marginBottom:12}}>Für {missingHolidayYears.join(", ")} sind keine Feiertage geladen – das Soll ist dort zu hoch. {isAdmin?"Unter Verwaltung → Feiertage laden.":"Bitte Admin informieren."}</div>}
                   <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%",borderCollapse:"collapse"}}>
-                      <thead><tr style={{fontSize:11,color:"#8890b8",textTransform:"uppercase",letterSpacing:".06em"}}>
-                        <th style={{textAlign:"left",padding:"6px 8px",fontWeight:700}}>Mitarbeiter</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Jahreskapazität</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Soll Periode</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ist Periode</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>± Periode</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}} title="Heute zählt erst, sobald für heute etwas erfasst ist">Saldo bis heute</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien {new Date().getFullYear()}</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Bezogen</th>
-                        <th style={{textAlign:"right",padding:"6px 8px",fontWeight:700}}>Ferien Rest</th>
-                      </tr></thead>
+                    <table className="ov-table table-cards">
+                      <thead>
+                        <tr className="ov-groups">
+                          <th></th>
+                          <th>Jahr {curY}</th>
+                          <th colSpan={3}>Periode</th>
+                          <th>Stand heute</th>
+                          <th colSpan={3}>Ferien {new Date().getFullYear()}</th>
+                        </tr>
+                        <tr>
+                          <th style={{textAlign:"left"}}>Mitarbeiter</th>
+                          <th>Kapazität</th>
+                          <th>Soll</th>
+                          <th>Ist</th>
+                          <th>±</th>
+                          <th title="Heute zählt erst, sobald für heute etwas erfasst ist">Saldo</th>
+                          <th>Verfügbar</th>
+                          <th>Bezogen</th>
+                          <th>Rest</th>
+                        </tr>
+                      </thead>
                       <tbody>{relevant.map(u=>{
                         const bal=calcVacBalance(u.id);
-                        // Kumuliert immer bis heute — unabhängig vom Filter
                         // Heute zählt erst, wenn für heute schon etwas erfasst ist – sonst bis gestern
                         const todayS=todayStr();
                         const hasToday=entries.some(e=>e.employee_id===u.id&&e.date===todayS)||absences.some(a=>a.user_id===u.id&&a.date===todayS);
@@ -1699,18 +1798,18 @@ export default function App(){
                         const fYM=toYM(fromYear,fromMonth),tYM=toYM(curY,curM);
                         const si=rb?rb.months.filter(m=>toYM(m.year,m.month)>=fYM&&toYM(m.year,m.month)<=tYM).reduce((a,m)=>({sollMin:a.sollMin+m.sollMin,istMin:a.istMin+m.istMin,diff:a.diff+m.diff}),{sollMin:0,istMin:0,diff:0}):null;
                         const cap=calcYearCapacity(u,pensumHistory,holidays,curY);
-                        const monColor=si?(si.diff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
-                        const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
-                        return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
-                          <td style={{padding:"8px 8px",fontSize:13,fontWeight:600}}>{u.name}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{cap.bruttoH}h<span style={{fontSize:10,color:"#8890b8"}}> Brutto</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {cap.holidayDays}T Feiertage ({cap.holidayH}h)</div><div style={{fontSize:11,color:"#e0e4f8",marginTop:2}}>{cap.nettoH}h Netto</div></td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{si?fmtTime(si.sollMin):"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:cumColor}}>{rb?(rb.cumulativeDiff>=0?"+":"-")+fmtTime(Math.abs(rb.cumulativeDiff)):"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{bal?<>{bal.available.toFixed(1)} T<div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{bal.entitlement.toFixed(1)} + {bal.carryOver.toFixed(1)} Vorjahr</div></>:"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#ff6b85"}}>{bal?bal.used.toFixed(1)+" T":"—"}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,color:bal?(bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"):"#8890b8"}}>{bal?bal.remaining.toFixed(1)+" T":"—"}</td>
+                        const sign=v=>(v>=0?"+":"−")+fmtTime(Math.abs(v));
+                        const col=v=>v>=0?"#4dffaa":"#ff6b85";
+                        return(<tr key={u.id}>
+                          <td className="cell-title">{u.name}</td>
+                          <td data-label={`Kapazität ${curY}`} style={{color:"#7c8bff"}}><span>{cap.nettoH}h netto<div className="cell-sub">{cap.bruttoH}h brutto − {cap.holidayDays}T Feiertage ({cap.holidayH}h)</div></span></td>
+                          <td data-label="Soll Periode" style={{color:"#9aa2c8"}}>{si?fmtTime(si.sollMin):"—"}</td>
+                          <td data-label="Ist Periode">{si?fmtTime(si.istMin):"—"}</td>
+                          <td data-label="± Periode" style={{fontWeight:700,color:si?col(si.diff):"#8890b8"}}>{si?sign(si.diff):"—"}</td>
+                          <td data-label="Saldo bis heute" style={{fontSize:13,fontWeight:700,color:rb?col(rb.cumulativeDiff):"#8890b8"}}>{rb?sign(rb.cumulativeDiff):"—"}</td>
+                          <td data-label="Ferien verfügbar" style={{color:"#9aa2c8"}}>{bal?<span>{bal.available.toFixed(1)} T<div className="cell-sub">{bal.entitlement.toFixed(1)} + {bal.carryOver.toFixed(1)} Vorjahr</div></span>:"—"}</td>
+                          <td data-label="Ferien bezogen" style={{color:"#ff6b85"}}>{bal?bal.used.toFixed(1)+" T":"—"}</td>
+                          <td data-label="Ferien Rest" style={{fontSize:13,fontWeight:700,color:bal?(bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"):"#8890b8"}}>{bal?bal.remaining.toFixed(1)+" T":"—"}</td>
                         </tr>);
                       })}</tbody>
                     </table>
@@ -1720,17 +1819,17 @@ export default function App(){
             })()}
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <div style={{padding:"14px 20px",borderBottom:"1px solid #1e2235"}}><span className="section-title" style={{marginBottom:0}}>Einträge ({filteredEntries.length})</span></div>
-              <div className="table-wrap"><table>
+              <div className="table-wrap"><table className="table-cards entry-cards">
                 <thead><tr><th>Datum</th>{isAdmin&&<th>Mitarbeiter</th>}<th>Projekt</th><th>Tätigkeit</th><th>Zeit</th><th className="hide-mobile">Bemerkung</th></tr></thead>
                 <tbody>
                   {filteredEntries.map(e=>(
                     <tr key={e.id}>
-                      <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{e.date}</td>
-                      {isAdmin&&<td style={{fontWeight:500}}>{e.employee_name}</td>}
-                      <td><span className="chip chip-blue">{e.project}</span></td>
-                      <td style={{color:"#9aa2c8"}}>{e.activity}</td>
-                      <td><span className="chip">{fmtTime(e.total_min)}</span></td>
-                      <td className="hide-mobile" style={{color:"#8890b8"}}>{e.note||"—"}</td>
+                      <td className="cell-title" style={{fontFamily:"'DM Mono',monospace",fontSize:12,whiteSpace:"nowrap"}}>{e.date}{isAdmin&&<span className="show-mobile-inline" style={{fontFamily:"'DM Sans',sans-serif",fontWeight:500,marginLeft:8}}>{e.employee_name}</span>}</td>
+                      {isAdmin&&<td className="hide-mobile" style={{fontWeight:500}}>{e.employee_name}</td>}
+                      <td data-label="Projekt"><span className="chip chip-blue">{e.project}</span></td>
+                      <td data-label="Tätigkeit" style={{color:"#9aa2c8"}}>{e.activity}</td>
+                      <td data-label="Zeit"><span className="chip">{fmtTime(e.total_min)}</span></td>
+                      <td data-label="Bemerkung" className={e.note?"":"hide-mobile"} style={{color:"#8890b8"}}>{e.note||"—"}</td>
                     </tr>
                   ))}
                   {filteredEntries.length===0&&<tr><td colSpan={7} style={{textAlign:"center",color:"#8890b8",padding:"28px 0"}}>Keine Einträge für diesen Zeitraum.</td></tr>}
@@ -1753,9 +1852,12 @@ export default function App(){
               <select className="input" style={{width:"auto"}} value={abschlussYear} onChange={e=>setAbschlussYear(+e.target.value)}>{years.map(y=><option key={y}>{y}</option>)}</select>
             </div></div>
             <div style={{fontSize:13,color:"#8890b8",marginBottom:16}}>{MONTHS[abschlussMonth]} {abschlussYear} — {abschlussEntries.length} Einträge, Total: <strong style={{color:"#e0e4f8"}}>{fmtTime(abschlussEntries.reduce((s,e)=>s+e.total_min,0))}</strong></div>
-            {abschlussPerEmp.map(({name,totalMin,entries:empE})=>(
-              <div key={name} className="abschluss-card">
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            {abschlussPerEmp.map(({id,name,totalMin,entries:empE,si,rb,vac,absCount})=>{
+              const sign=v=>(v>=0?"+":"−")+fmtTime(Math.abs(v));
+              const col=v=>v>=0?"#4dffaa":"#ff6b85";
+              return(
+              <div key={id} className="abschluss-card">
+                <div className="abschluss-head">
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
                     <div className="avatar">{initials(name)}</div>
                     <div><div style={{fontWeight:600,fontSize:15}}>{name}</div><div style={{color:"#8890b8",fontSize:12,marginTop:2}}>{empE.length} Einträge</div></div>
@@ -1763,43 +1865,27 @@ export default function App(){
                   <div style={{textAlign:"right"}}>
                     <div className="big-num" style={{fontSize:20}}>{fmtTime(totalMin)}</div>
                     <div style={{color:"#7c8bff",fontSize:12,fontFamily:"'DM Mono',monospace"}}>{fmtDecimal(totalMin)} h</div>
-                    {(()=>{
-                      const empUser=users.find(u=>u.name===name);
-                      if(!empUser)return null;
-                      const si=calcSollIst(empUser.id,abschlussMonth,abschlussYear);
-                      const rb=calcRunningBalance(empUser.id,abschlussMonth,abschlussYear);
-                      if(!si)return null;
-                      const diffColor=si.diff>=0?"#4dffaa":"#ff6b85";
-                      const cumColor=rb&&rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85";
-                      return(<>
-                        <div style={{marginTop:6,fontSize:11,color:"#8890b8"}}>Soll: {fmtTime(si.sollMin)} · Ist: {fmtTime(si.istMin)} · <span style={{color:diffColor,fontWeight:700}}>{si.diff>=0?"+":""}{fmtTime(Math.abs(si.diff))}</span></div>
-                        {rb&&<div style={{marginTop:4,fontSize:12,fontWeight:700}}>Saldo kumuliert: <span style={{color:cumColor}}>{rb.cumulativeDiff>=0?"+":"-"}{fmtTime(Math.abs(rb.cumulativeDiff))}</span></div>}
-                      </>);
-                    })()}
                   </div>
                 </div>
-                <div className="table-wrap"><table>
+                {si&&<div className="kpi-row">
+                  <div className="kpi"><div className="kpi-label">Soll</div><div className="kpi-val">{fmtTime(si.sollMin)}</div></div>
+                  <div className="kpi"><div className="kpi-label">Ist</div><div className="kpi-val">{fmtTime(si.istMin)}</div></div>
+                  <div className="kpi"><div className="kpi-label">± Monat</div><div className="kpi-val" style={{color:col(si.diff)}}>{sign(si.diff)}</div></div>
+                  {rb&&<div className="kpi"><div className="kpi-label">Saldo kumuliert</div><div className="kpi-val" style={{color:col(rb.cumulativeDiff)}}>{sign(rb.cumulativeDiff)}</div></div>}
+                </div>}
+                {empE.length>0&&<div className="table-wrap"><table className="table-cards entry-cards">
                   <thead><tr><th>Datum</th><th>Projekt</th><th>Tätigkeit</th><th>Zeit</th><th className="hide-mobile">Bemerkung</th></tr></thead>
                   <tbody>{empE.map(e=>(
-                    <tr key={e.id}><td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{e.date}</td><td><span className="chip chip-blue">{e.project}</span></td><td style={{color:"#9aa2c8"}}>{e.activity}</td><td><span className="chip">{fmtTime(e.total_min)}</span></td><td className="hide-mobile" style={{color:"#8890b8"}}>{e.note||"—"}</td></tr>
+                    <tr key={e.id}><td data-label="Datum" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{e.date}</td><td data-label="Projekt"><span className="chip chip-blue">{e.project}</span></td><td data-label="Tätigkeit" style={{color:"#9aa2c8"}}>{e.activity}</td><td data-label="Zeit"><span className="chip">{fmtTime(e.total_min)}</span></td><td className="hide-mobile" style={{color:"#8890b8"}}>{e.note||"—"}</td></tr>
                   ))}</tbody>
-                </table></div>
-                {(()=>{
-                  const empUser=users.find(u=>u.name===name);
-                  if(!empUser||empUser.employment_type!=="salaried")return null;
-                  const bal=calcVacBalance(empUser.id);
-                  const monthAbsences=absences.filter(a=>a.user_id===empUser.id&&a.date.startsWith(`${abschlussYear}-${String(abschlussMonth+1).padStart(2,"0")}`));
-                  if(!bal)return null;
-                  return(
-                    <div style={{padding:"12px 16px",borderTop:"1px solid #1e2235",display:"flex",gap:24,flexWrap:"wrap"}}>
-                      <div style={{fontSize:12,color:"#8890b8"}}>Ferienguthaben: <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining.toFixed(1)} Tage verbleibend</strong> ({bal.used} von {bal.available.toFixed(1)} bezogen, inkl. {bal.carryOver.toFixed(1)} Übertrag)</div>
-                      {monthAbsences.length>0&&<div style={{fontSize:12,color:"#8890b8"}}>Abwesenheiten {MONTHS[abschlussMonth]}: {monthAbsences.filter(a=>a.type==="frei").length} Ferien,{monthAbsences.filter(a=>a.type==="krank").length} Krank</div>}
-                    </div>
-                  );
-                })()}
-              </div>
-            ))}
-            {abschlussPerEmp.length===0&&<div style={{textAlign:"center",color:"#8890b8",padding:"48px 0"}}>Keine Einträge für {MONTHS[abschlussMonth]} {abschlussYear}.</div>}
+                </table></div>}
+                {si&&<div style={{padding:"12px 4px 0",borderTop:"1px solid #1e2235",marginTop:12,display:"flex",gap:"6px 24px",flexWrap:"wrap",fontSize:12,color:"#8890b8"}}>
+                  <div>Abwesenheiten {MONTHS[abschlussMonth]}: <b style={{color:"#e0e4f8"}}>{absCount.ferien}</b> Ferien · <b style={{color:"#e0e4f8"}}>{absCount.krank}</b> Krank · <b style={{color:"#e0e4f8"}}>{absCount.unbezahlt}</b> Unbezahlt</div>
+                  {vac&&<div>Ferien {vac.year}: <strong style={{color:vac.remaining<0?"#ff6b85":vac.remaining<5?"#ffbe32":"#4dffaa"}}>{vac.remaining.toFixed(1)} Tage Rest</strong> ({vac.used} von {vac.available.toFixed(1)} bezogen)</div>}
+                </div>}
+              </div>);
+            })}
+            {abschlussPerEmp.length===0&&<div style={{textAlign:"center",color:"#8890b8",padding:"48px 0"}}>Keine Einträge oder Soll-Stunden für {MONTHS[abschlussMonth]} {abschlussYear}.</div>}
           </div>
         )}
 
