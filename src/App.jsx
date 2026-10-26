@@ -1217,10 +1217,14 @@ export default function App(){
     const allDates=[...entries.filter(e=>e.employee_id===userId).map(e=>e.date),...absences.filter(a=>a.user_id===userId).map(a=>a.date)];
     const minYear=allDates.length>0?Math.min(...allDates.map(d=>parseInt(d.substring(0,4)))):curYear;
     let totalDays=0;
+    const curMonth=new Date().getMonth();
     for(let y=minYear;y<=curYear;y++){
-      const pm=getPensumForMonth(userId,0,y);
-      const pensum=parseWorkDays(pm?.work_days||user.work_days).length/5;
-      totalDays+=parseFloat(user.vacation_days_per_year||25)*pensum;
+      const monthsInYear=y===curYear?curMonth+1:12;
+      for(let mo=0;mo<monthsInYear;mo++){
+        const pm=getPensumForMonth(userId,mo,y);
+        const pensum=parseWorkDays(pm?.work_days||user.work_days).length/5;
+        totalDays+=parseFloat(user.vacation_days_per_year||25)*pensum/12;
+      }
     }
     const pmNow=getPensumForMonth(userId,new Date().getMonth(),curYear);
     const wdNow=parseWorkDays(pmNow?.work_days||user.work_days);
