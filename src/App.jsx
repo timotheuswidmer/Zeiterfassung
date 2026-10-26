@@ -1653,17 +1653,34 @@ export default function App(){
                         // Soll/Ist für den gewählten Zeitraum (Von–Bis) summieren
                         const fYM=toYM(fromYear,fromMonth),tYM=toYM(curY,curM);
                         const si=rb?rb.months.filter(m=>toYM(m.year,m.month)>=fYM&&toYM(m.year,m.month)<=tYM).reduce((a,m)=>({sollMin:a.sollMin+m.sollMin,istMin:a.istMin+m.istMin,diff:a.diff+m.diff}),{sollMin:0,istMin:0,diff:0}):null;
-                        const wd2=parseWorkDays(u.work_days);
-                        let wdCount=0;
-                        for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd2.includes(dow))wdCount++;}
-                        const holidayDays=Math.round((bal?.holidayDaysThisYear||0)*10)/10;
-                        const capacityDays=Math.round((wdCount-(bal?.holidayDaysThisYear||0))*10)/10;
-                        const capacityH=u.annual_hours!=null?parseFloat(u.annual_hours):Math.round(capacityDays*(parseFloat(u.daily_hours)||0)*10)/10;
+                        let bruttoH=0,holidayH=0,holidayDaysProrated=0;
+                        if(u.annual_hours!=null){
+                          bruttoH=parseFloat(u.annual_hours);
+                          const dh=parseFloat(u.daily_hours)||0;
+                          holidayDaysProrated=Math.round((bal?.holidayDaysThisYear||0)*10)/10;
+                          holidayH=Math.round(holidayDaysProrated*dh*10)/10;
+                        }else{
+                          for(let mo=0;mo<12;mo++){
+                            const pm=getPensumForMonth(u.id,mo,curY);
+                            const wdMo=parseWorkDays(pm?.work_days||u.work_days);
+                            const pensum=wdMo.length/5;
+                            const dh=parseFloat(pm?.daily_hours||u.daily_hours)||0;
+                            for(let d=new Date(curY,mo,1);d.getMonth()===mo;d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wdMo.includes(dow))bruttoH+=dh;}
+                            const hInMonth=holidays.filter(h=>new Date(h.date).getFullYear()===curY&&new Date(h.date).getMonth()===mo).length;
+                            holidayDaysProrated+=hInMonth*pensum;
+                            holidayH+=hInMonth*pensum*dh;
+                          }
+                          bruttoH=Math.round(bruttoH*10)/10;
+                          holidayH=Math.round(holidayH*10)/10;
+                          holidayDaysProrated=Math.round(holidayDaysProrated*10)/10;
+                        }
+                        const capacityH=bruttoH;
+                        const holidayDays=holidayDaysProrated;
                         const monColor=si?(si.diff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
                           <td style={{padding:"8px 8px",fontSize:13,fontWeight:600}}>{u.name}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> Brutto</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {holidayDays}T Feiertage ({Math.round(holidayDays*(parseFloat(u.daily_hours)||0)*10)/10}h)</div><div style={{fontSize:11,color:"#e0e4f8",marginTop:2}}>{Math.round((capacityH-holidayDays*(parseFloat(u.daily_hours)||0))*10)/10}h Netto</div></td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> Brutto</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {holidayDays}T Feiertage ({holidayH}h)</div><div style={{fontSize:11,color:"#e0e4f8",marginTop:2}}>{Math.round((capacityH-holidayH)*10)/10}h Netto</div></td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{si?fmtTime(si.sollMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
