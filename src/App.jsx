@@ -523,7 +523,7 @@ function LoginScreen({onLogin}){
   );
 }
 
-function UserModal({existing,onSave,onClose,holidays}){
+function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePensum}){
   const DAYS=[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"},{v:"6",l:"Sa"},{v:"7",l:"So"}];
   const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",annual_hours:existing.annual_hours!=null?String(existing.annual_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",annual_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
   const [pensumChange,setPensumChange]=useState({valid_from:"",weekly_hours:"",work_days:existing?.work_days||"1,2,3,4,5"});
@@ -598,6 +598,7 @@ function UserModal({existing,onSave,onClose,holidays}){
           <div className="grid-2">
             <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{(()=>{const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const effective=Math.round((parseFloat(form.vacation_days_per_year)||25)*pensum*10)/10;return pensum<1?<div className="pw-hint">Bei {wd.length}/5 Tagen → effektiv <b>{effective} Tage</b>/Jahr</div>:null;})()}</div>
           </div>
+          {existing&&(()=>{const uPh=pensumHistory.filter(h=>h.user_id===existing.id).sort((a,b)=>a.valid_from.localeCompare(b.valid_from));return uPh.length>0&&<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}><div className="label" style={{marginBottom:8}}>Pensum-Verlauf</div>{uPh.map(h=>{const wdC=(h.work_days||"1,2,3,4,5").split(",").filter(Boolean).length;const weeklyH=Math.round(h.daily_hours*wdC*100)/100;const pct=Math.round(wdC/5*100);return<div key={h.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,fontSize:13}}><span style={{fontFamily:"'DM Mono',monospace",color:"#7c8bff",minWidth:110}}>{h.valid_from==="2000-01-01"?"Startwert":`${MONTHS[parseInt(h.valid_from.substring(5,7))-1]} ${h.valid_from.substring(0,4)}`}</span><span style={{color:"#e0e4f8"}}>{pct}% · {weeklyH}h/Wo</span>{uPh.length>1&&<button className="btn-danger" style={{padding:"2px 7px",fontSize:11,marginLeft:"auto"}} onClick={()=>onDeletePensum&&onDeletePensum(h.id)}>✕</button>}</div>;})} </div>;})()}
           {existing&&<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}>
             <div className="label" style={{marginBottom:10}}>Pensum-Änderung (optional)</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>
@@ -1267,7 +1268,7 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
-      {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)} holidays={holidays}/>}
+      {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)} holidays={holidays} pensumHistory={pensumHistory} onDeletePensum={async(id)=>{try{await sb.remove("pensum_history",id);setPensumHistory(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}}}/>}
       {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} onStartInForm={swStartFromEntry} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStartWith={swStartWith} swPause={swPause} swStopClean={swStopClean}/>}
       {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
