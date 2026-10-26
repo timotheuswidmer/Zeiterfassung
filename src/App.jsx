@@ -1752,7 +1752,7 @@ export default function App(){
                   if(!bal)return null;
                   return(
                     <div style={{padding:"12px 16px",borderTop:"1px solid #1e2235",display:"flex",gap:24,flexWrap:"wrap"}}>
-                      <div style={{fontSize:12,color:"#8890b8"}}>Ferienguthaben: <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining} Tage verbleibend</strong> ({bal.used}/{bal.total} bezogen)</div>
+                      <div style={{fontSize:12,color:"#8890b8"}}>Ferienguthaben: <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining.toFixed(1)} Tage verbleibend</strong> ({bal.used}/{bal.total.toFixed(1)} bezogen)</div>
                       {monthAbsences.length>0&&<div style={{fontSize:12,color:"#8890b8"}}>Abwesenheiten {MONTHS[abschlussMonth]}: {monthAbsences.filter(a=>a.type==="frei").length} Frei, {monthAbsences.filter(a=>a.type==="krank").length} Krank</div>}
                     </div>
                   );
