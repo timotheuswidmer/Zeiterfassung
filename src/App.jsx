@@ -174,7 +174,7 @@ const CSS = `
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const fmtTime = (min) => { const m=Math.round(min); return `${Math.floor(m/60)}h ${String(m%60).padStart(2,"0")}m`; };
 const fmtDecimal = (min) => (min/60).toFixed(2);
-const todayStr = () => new Date().toISOString().split("T")[0];
+const todayStr = () => fmtYMD(new Date());
 const initials = (name) => name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
 const years = Array.from({length:6},(_,i)=>new Date().getFullYear()-2+i);
 const toYM = (year,month) => year*100+month;
@@ -200,8 +200,9 @@ const calcYearCapacity = (user,history,holidays,year) => {
     const pm=pensumAt(history,user,mo,year);
     const wd=parseWD(pm.work_days);
     const dh=parseFloat(pm.daily_hours)||0;
-    for(let d=new Date(year,mo,1);d.getMonth()===mo;d.setDate(d.getDate()+1)){if(wd.includes(d.getDay()||7))bruttoH+=dh;}
-    const hDays=holidays.filter(h=>h.date.startsWith(`${year}-${pad2(mo+1)}`)&&isWeekdayHoliday(h)).length*wd.length/5;
+    const start=user.start_date||"";
+    for(let d=new Date(year,mo,1);d.getMonth()===mo;d.setDate(d.getDate()+1)){if(wd.includes(d.getDay()||7)&&fmtYMD(d)>=start)bruttoH+=dh;}
+    const hDays=holidays.filter(h=>h.date.startsWith(`${year}-${pad2(mo+1)}`)&&isWeekdayHoliday(h)&&h.date>=start).length*wd.length/5;
     holidayDays+=hDays;holidayH+=hDays*dh;
   }
   const r=v=>Math.round(v*10)/10;
@@ -553,7 +554,7 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
   const needsStart=uPh.length===0;
   const nowD=new Date();
   const currentPensum=existing&&!needsStart?pensumAt(pensumHistory,existing,nowD.getMonth(),nowD.getFullYear()):null;
-  const [form,setForm]=useState(existing?{name:existing.name,username:existing.username,role:existing.role,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",weekly_hours:existing.daily_hours!=null?String(Math.round(existing.daily_hours*5*100)/100):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",weekly_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
+  const [form,setForm]=useState(existing?{name:existing.name,username:existing.username,role:existing.role,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",weekly_hours:existing.daily_hours!=null?String(Math.round(existing.daily_hours*5*100)/100):"",start_date:existing.start_date||"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",weekly_hours:"",work_days:"1,2,3,4,5",start_date:"",vacation_days_per_year:"25"});
   const [pensumChange,setPensumChange]=useState({valid_from:"",weekly_hours:"",work_days:currentPensum?.work_days||existing?.work_days||"1,2,3,4,5"});
   const [editingPensumId,setEditingPensumId]=useState(null);
   const [editPensumDraft,setEditPensumDraft]=useState({valid_from:"",weekly_hours:"",work_days:"1,2,3,4,5"});
@@ -567,8 +568,8 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
   const startPensum=isSalaried&&needsStart&&startWeekly>0?{daily_hours:Math.round(startWeekly/5*100)/100,work_days:form.work_days||"1,2,3,4,5"}:null;
   const curY=nowD.getFullYear();
   const capacity=startPensum
-    ?calcYearCapacity({id:-1},[{user_id:-1,valid_from:"2000-01-01",...startPensum}],holidays||[],curY)
-    :(existing&&!needsStart?calcYearCapacity(existing,pensumHistory,holidays||[],curY):null);
+    ?calcYearCapacity({id:-1,start_date:form.start_date||null},[{user_id:-1,valid_from:"2000-01-01",...startPensum}],holidays||[],curY)
+    :(existing&&!needsStart?calcYearCapacity({...existing,start_date:form.start_date||null},pensumHistory,holidays||[],curY):null);
   const effectiveWD=parseWD(currentPensum?.work_days||form.work_days);
 
   const save=async()=>{
@@ -576,7 +577,7 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
     if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}
     if(isSalaried&&needsStart&&!startPensum){setErr("Bitte Vollzeit-Stunden pro Woche angeben.");return;}
     setSaving(true);
-    try{await onSave({name:form.name.trim(),username:form.username.trim().toLowerCase(),role:form.role,password:form.password.trim()||existing?.password,employment_type:form.employment_type,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25,startPensum,pensumChange:isSalaried&&!needsStart&&pensumChange.valid_from&&pensumChange.weekly_hours?pensumChange:null});}
+    try{await onSave({name:form.name.trim(),username:form.username.trim().toLowerCase(),role:form.role,password:form.password.trim()||existing?.password,employment_type:form.employment_type,start_date:isSalaried&&form.start_date?form.start_date:null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25,startPensum,pensumChange:isSalaried&&!needsStart&&pensumChange.valid_from&&pensumChange.weekly_hours?pensumChange:null});}
     catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
   return(
@@ -604,6 +605,7 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
             </div>
             <div className="field-group"><label className="label">Vollzeit h/Woche (100%) *</label><input className="input" type="number" min="0" max="80" step="0.25" placeholder="z.B. 41.25" value={form.weekly_hours} onChange={e=>f("weekly_hours")(e.target.value)}/>{startPensum&&<div className="pw-hint">{Math.round(effectiveWD.length/5*100)}% → <b>{Math.round(startWeekly*effectiveWD.length/5*100)/100}h/Wo</b> · {startPensum.daily_hours}h pro Arbeitstag</div>}</div>
           </>}
+          <div className="field-group"><label className="label">Eintrittsdatum</label><input type="date" className="input" value={form.start_date} onChange={e=>f("start_date")(e.target.value)}/><div className="pw-hint">Soll, Saldo und Ferienanspruch werden ab diesem Datum gerechnet. Leer = ab dem ersten Eintrag.</div></div>
           {capacity&&<div className="pw-hint" style={{fontSize:12}}>Kapazität {curY}: <b>{capacity.bruttoH}h</b> brutto − {capacity.holidayDays}T Feiertage ({capacity.holidayH}h) = <b>{capacity.nettoH}h netto</b></div>}
           <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{effectiveWD.length<5&&<div className="pw-hint">Bei {effectiveWD.length}/5 Tagen → effektiv <b>{Math.round((parseFloat(form.vacation_days_per_year)||25)*effectiveWD.length/5*10)/10} Tage</b>/Jahr</div>}</div>
           {!needsStart&&(()=>{
@@ -1148,7 +1150,7 @@ export default function App(){
   const addProduct=async()=>{if(!newProduct.trim())return;try{await sb.insert("products",{name:newProduct.trim()});setProducts(prev=>[...prev,newProduct.trim()].sort());setNewProduct("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProduct=async(name)=>{try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const saveUser=async(data)=>{
-    const base={name:data.name,username:data.username,role:data.role,employment_type:data.employment_type||"hourly",vacation_days_per_year:data.vacation_days_per_year||25,...(data.startPensum?{daily_hours:data.startPensum.daily_hours,work_days:data.startPensum.work_days}:{})};
+    const base={name:data.name,username:data.username,role:data.role,employment_type:data.employment_type||"hourly",start_date:data.start_date||null,vacation_days_per_year:data.vacation_days_per_year||25,...(data.startPensum?{daily_hours:data.startPensum.daily_hours,work_days:data.startPensum.work_days}:{})};
     let userId;
     if(userModal&&userModal!=="new"){
       const updated=await sb.update("users",userModal.id,{...base,password:data.password||userModal.password});
@@ -1227,15 +1229,20 @@ export default function App(){
     if(!user||user.employment_type!=="salaried")return null;
     const curYear=new Date().getFullYear();
     const allDates=[...entries.filter(e=>e.employee_id===userId).map(e=>e.date),...absences.filter(a=>a.user_id===userId).map(a=>a.date)];
-    const minYear=allDates.length>0?Math.min(...allDates.map(d=>parseInt(d.substring(0,4)))):curYear;
+    // Mit Eintrittsdatum ab Eintritt (erster Monat anteilig nach Tagen), sonst ab Januar des ersten Datenjahres
+    const startY=user.start_date?parseInt(user.start_date.substring(0,4)):(allDates.length>0?Math.min(...allDates.map(d=>parseInt(d.substring(0,4)))):curYear);
+    const startM=user.start_date?parseInt(user.start_date.substring(5,7))-1:0;
+    const startD=user.start_date?parseInt(user.start_date.substring(8,10)):1;
     let totalDays=0;
     const curMonth=new Date().getMonth();
-    for(let y=minYear;y<=curYear;y++){
+    for(let y=startY;y<=curYear;y++){
       const monthsInYear=y===curYear?curMonth+1:12;
-      for(let mo=0;mo<monthsInYear;mo++){
+      for(let mo=y===startY?startM:0;mo<monthsInYear;mo++){
         const pm=getPensumForMonth(userId,mo,y);
         const pensum=parseWorkDays(pm?.work_days||user.work_days).length/5;
-        totalDays+=parseFloat(user.vacation_days_per_year||25)*pensum/12;
+        const daysInMonth=new Date(y,mo+1,0).getDate();
+        const share=y===startY&&mo===startM?(daysInMonth-startD+1)/daysInMonth:1;
+        totalDays+=parseFloat(user.vacation_days_per_year||25)*pensum/12*share;
       }
     }
     const pmNow=getPensumForMonth(userId,new Date().getMonth(),curYear);
@@ -1259,28 +1266,35 @@ export default function App(){
     const lastDay=cutoffDay?Math.min(cutoffDay,daysInMonth):daysInMonth;
     const monthStr=`${year}-${String(month+1).padStart(2,"0")}`;
     const cutoffStr=cutoffDay?`${monthStr}-${String(lastDay).padStart(2,"0")}`:null;
+    // Vor dem Eintrittsdatum gibt es kein Soll; im Eintrittsmonat erst ab Eintrittstag
+    const start=user.start_date||"";
+    if(start&&start.substring(0,7)>monthStr)return null;
+    const firstDay=start.substring(0,7)===monthStr?parseInt(start.substring(8,10)):1;
+    const inRange=date=>date.startsWith(monthStr)&&date>=start&&(!cutoffStr||date<=cutoffStr);
     let workDays=0;
-    for(let d=1;d<=lastDay;d++){const dow=(new Date(year,month,d).getDay())||7;if(wd.includes(dow))workDays++;}
-    const holidaysInMonth=holidays.filter(h=>{const d=new Date(h.date);return d.getFullYear()===year&&d.getMonth()===month&&(!cutoffStr||h.date<=cutoffStr)&&isWeekdayHoliday(h);}).length*pensum;
-    const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
-    const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
-    const unbezahltInMonth=absences.filter(a=>a.user_id===userId&&a.type==="unbezahlt"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
+    for(let d=firstDay;d<=lastDay;d++){const dow=(new Date(year,month,d).getDay())||7;if(wd.includes(dow))workDays++;}
+    const holidaysInMonth=holidays.filter(h=>inRange(h.date)&&isWeekdayHoliday(h)).length*pensum;
+    const myAbs=absences.filter(a=>a.user_id===userId&&inRange(a.date));
+    const freiInMonth=myAbs.filter(a=>a.type==="frei").length;
+    const krankInMonth=myAbs.filter(a=>a.type==="krank").length;
+    const unbezahltInMonth=myAbs.filter(a=>a.type==="unbezahlt").length;
     // Unbezahlt reduziert das Soll (kein Ferienabzug, kein Saldo-Einfluss)
     const sollMin=Math.max(0,(workDays-holidaysInMonth-unbezahltInMonth)*pm.daily_hours*60);
-    const istEntries=entries.filter(e=>e.employee_id===userId&&e.date.startsWith(monthStr)&&(!cutoffStr||e.date<=cutoffStr)).reduce((s,e)=>s+e.total_min,0);
+    const istEntries=entries.filter(e=>e.employee_id===userId&&inRange(e.date)).reduce((s,e)=>s+e.total_min,0);
     const istMin=istEntries+((freiInMonth+krankInMonth)*pm.daily_hours*60);
     return{sollMin,istMin,diff:istMin-sollMin,workDays,freiInMonth,krankInMonth,unbezahltInMonth};
-  },[users,absences,entries,getPensumForMonth]);
+  },[users,absences,entries,holidays,getPensumForMonth]);
 
   const calcRunningBalance=useCallback((userId,untilMonth,untilYear,untilDay=null)=>{
     const user=users.find(u=>u.id===userId);
     if(!user||user.employment_type!=="salaried")return null;
     if(!getPensumForMonth(userId,untilMonth,untilYear)?.daily_hours)return null;
-    const allDates=entries.filter(e=>e.employee_id===userId).map(e=>e.date);
-    const absenceDates=absences.filter(a=>a.user_id===userId).map(a=>a.date);
-    const allD=[...allDates,...absenceDates];
-    if(!allD.length)return{cumulativeDiff:0,months:[]};
-    const firstDate=allD.reduce((a,b)=>a<b?a:b);
+    let firstDate=user.start_date;
+    if(!firstDate){
+      const allD=[...entries.filter(e=>e.employee_id===userId).map(e=>e.date),...absences.filter(a=>a.user_id===userId).map(a=>a.date)];
+      if(!allD.length)return{cumulativeDiff:0,months:[]};
+      firstDate=allD.reduce((a,b)=>a<b?a:b);
+    }
     const startYear=parseInt(firstDate.substring(0,4));
     const startMonth=parseInt(firstDate.substring(5,7))-1;
     let cumulativeDiff=0;
@@ -1293,7 +1307,7 @@ export default function App(){
       m++;if(m>11){m=0;y++;}
     }
     return{cumulativeDiff,months};
-  },[users,entries,absences,calcSollIst]);
+  },[users,entries,absences,calcSollIst,getPensumForMonth]);
 
   const myEntries=useMemo(()=>entries.filter(e=>e.employee_id===currentUser?.id),[entries,currentUser]);
   const dayTotal=useMemo(()=>myEntries.filter(e=>e.date===inlineForm.date).reduce((s,e)=>s+e.total_min,0),[myEntries,inlineForm.date]);
@@ -1420,7 +1434,8 @@ export default function App(){
                       const dow=d.getDay()||7;
                       const isWorkDay=wd.includes(dow);
                       const isHoliday=holidays.some(h=>h.date===inlineForm.date);
-                      const sollMin=(isWorkDay&&!isHoliday)?Math.round(pm.daily_hours*60):0;
+                      const beforeStart=u.start_date&&inlineForm.date<u.start_date;
+                      const sollMin=(isWorkDay&&!isHoliday&&!beforeStart)?Math.round(pm.daily_hours*60):0;
                       const diff=dayTotal-sollMin;
                       return<div style={{fontSize:11,color:"#8890b8",marginTop:3}}>Soll: <span style={{color:"#9aa2c8",fontFamily:"'DM Mono',monospace"}}>{fmtTime(sollMin)}</span>{dayTotal>0&&sollMin>0&&<span style={{marginLeft:6,fontWeight:700,color:diff>=0?"#4dffaa":"#ff6b85"}}>{diff>=0?"+":""}{fmtTime(Math.abs(diff))}</span>}</div>;
                     })()}
