@@ -184,6 +184,29 @@ const fmtFileRange = (fromYear,fromMonth,toYear,toMonth) => {
   const t=`${toYear}_${String(toMonth+1).padStart(2,"0")}`;
   return f===t ? f : `${f}-${t}`;
 };
+const pad2 = n => String(n).padStart(2,"0");
+const fmtYMD = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const parseWD = wd => (wd||"1,2,3,4,5").split(",").filter(Boolean).map(Number);
+// Nur Feiertage Mo–Fr reduzieren das Soll
+const isWeekdayHoliday = h => { const d=new Date(h.date+"T12:00:00").getDay(); return d>=1&&d<=5; };
+const pensumAt = (history,user,month,year) => {
+  const monthFirst=`${year}-${pad2(month+1)}-01`;
+  const h=history.filter(x=>x.user_id===user.id&&x.valid_from<=monthFirst).sort((a,b)=>b.valid_from.localeCompare(a.valid_from))[0];
+  return h?{daily_hours:h.daily_hours,work_days:h.work_days}:{daily_hours:user.daily_hours,work_days:user.work_days};
+};
+const calcYearCapacity = (user,history,holidays,year) => {
+  let bruttoH=0,holidayDays=0,holidayH=0;
+  for(let mo=0;mo<12;mo++){
+    const pm=pensumAt(history,user,mo,year);
+    const wd=parseWD(pm.work_days);
+    const dh=parseFloat(pm.daily_hours)||0;
+    for(let d=new Date(year,mo,1);d.getMonth()===mo;d.setDate(d.getDate()+1)){if(wd.includes(d.getDay()||7))bruttoH+=dh;}
+    const hDays=holidays.filter(h=>h.date.startsWith(`${year}-${pad2(mo+1)}`)&&isWeekdayHoliday(h)).length*wd.length/5;
+    holidayDays+=hDays;holidayH+=hDays*dh;
+  }
+  const r=v=>Math.round(v*10)/10;
+  return{bruttoH:r(bruttoH),holidayDays:r(holidayDays),holidayH:r(holidayH),nettoH:r(bruttoH-holidayH)};
+};
 
 // ─── SheetJS laden ────────────────────────────────────────────────────────────
 function loadSheetJS(){
@@ -525,8 +548,13 @@ function LoginScreen({onLogin}){
 
 function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePensum,onUpdatePensum}){
   const DAYS=[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"},{v:"6",l:"Sa"},{v:"7",l:"So"}];
-  const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",annual_hours:existing.annual_hours!=null?String(existing.annual_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",annual_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
-  const [pensumChange,setPensumChange]=useState({valid_from:"",weekly_hours:"",work_days:existing?.work_days||"1,2,3,4,5"});
+  const uPh=existing?pensumHistory.filter(h=>h.user_id===existing.id).sort((a,b)=>a.valid_from.localeCompare(b.valid_from)):[];
+  // Ohne Pensum-Verlauf wird ein Startwert erfasst, sonst läuft alles über den Verlauf
+  const needsStart=uPh.length===0;
+  const nowD=new Date();
+  const currentPensum=existing&&!needsStart?pensumAt(pensumHistory,existing,nowD.getMonth(),nowD.getFullYear()):null;
+  const [form,setForm]=useState(existing?{name:existing.name,username:existing.username,role:existing.role,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",weekly_hours:existing.daily_hours!=null?String(Math.round(existing.daily_hours*5*100)/100):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",weekly_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
+  const [pensumChange,setPensumChange]=useState({valid_from:"",weekly_hours:"",work_days:currentPensum?.work_days||existing?.work_days||"1,2,3,4,5"});
   const [editingPensumId,setEditingPensumId]=useState(null);
   const [editPensumDraft,setEditPensumDraft]=useState({valid_from:"",weekly_hours:"",work_days:"1,2,3,4,5"});
   const [deleteConfirmId,setDeleteConfirmId]=useState(null);
@@ -534,41 +562,21 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
   const toggleDay=v=>{const days=(form.work_days||"").split(",").filter(Boolean);const nd=days.includes(v)?days.filter(d=>d!==v):[...days,v].sort();setForm(p=>({...p,work_days:nd.join(",")}));};
 
-  // Berechne Arbeitstage im aktuellen Jahr minus Feiertage auf Arbeitstagen
-  const calcWorkdaysInYear=()=>{
-    const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);
-    const pensum=wd.length/5;
-    const curY=new Date().getFullYear();
-    let count=0;
-    for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd.includes(String(dow)))count++;}
-    const holidayDeduction=(holidays||[]).filter(h=>h.year===curY).length*pensum;
-    return Math.round((count-holidayDeduction)*10)/10;
-  };
-
-  // Brutto-Arbeitstage (vor Feiertagsabzug)
-  const calcRawWorkdaysInYear=()=>{
-    const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);
-    const curY=new Date().getFullYear();
-    let count=0;
-    for(let d=new Date(curY,0,1);d<=new Date(curY,11,31);d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wd.includes(String(dow)))count++;}
-    return count;
-  };
-  const onDailyChange=v=>{
-    const dh=parseFloat(v);
-    if(!isNaN(dh)&&dh>0){const raw=calcRawWorkdaysInYear();setForm(p=>({...p,daily_hours:v,annual_hours:String(Math.round(dh*raw*10)/10)}));}
-    else setForm(p=>({...p,daily_hours:v,annual_hours:""}));
-  };
-  const onAnnualChange=v=>{
-    const ah=parseFloat(v);
-    if(!isNaN(ah)&&ah>0){const raw=calcRawWorkdaysInYear();setForm(p=>({...p,annual_hours:v,daily_hours:String(Math.round(ah/raw*100)/100)}));}
-    else setForm(p=>({...p,annual_hours:v,daily_hours:""}));
-  };
+  const isSalaried=form.employment_type==="salaried";
+  const startWeekly=parseFloat(form.weekly_hours);
+  const startPensum=isSalaried&&needsStart&&startWeekly>0?{daily_hours:Math.round(startWeekly/5*100)/100,work_days:form.work_days||"1,2,3,4,5"}:null;
+  const curY=nowD.getFullYear();
+  const capacity=startPensum
+    ?calcYearCapacity({id:-1},[{user_id:-1,valid_from:"2000-01-01",...startPensum}],holidays||[],curY)
+    :(existing&&!needsStart?calcYearCapacity(existing,pensumHistory,holidays||[],curY):null);
+  const effectiveWD=parseWD(currentPensum?.work_days||form.work_days);
 
   const save=async()=>{
     if(!form.name.trim()||!form.username.trim()){setErr("Name und Benutzername sind Pflicht.");return;}
     if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}
+    if(isSalaried&&needsStart&&!startPensum){setErr("Bitte Vollzeit-Stunden pro Woche angeben.");return;}
     setSaving(true);
-    try{await onSave({...form,name:form.name.trim(),username:form.username.trim().toLowerCase(),password:form.password.trim()||existing?.password,daily_hours:form.daily_hours?parseFloat(form.daily_hours):null,annual_hours:form.annual_hours?parseFloat(form.annual_hours):null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25,pensumChange:pensumChange.valid_from&&pensumChange.weekly_hours?pensumChange:null});}
+    try{await onSave({name:form.name.trim(),username:form.username.trim().toLowerCase(),role:form.role,password:form.password.trim()||existing?.password,employment_type:form.employment_type,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25,startPensum,pensumChange:isSalaried&&!needsStart&&pensumChange.valid_from&&pensumChange.weekly_hours?pensumChange:null});}
     catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
   return(
@@ -587,23 +595,18 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
             <option value="salaried">Festangestellt</option>
           </select>
         </div>
-        {form.employment_type==="salaried"&&<>
-          <div className="field-group"><label className="label">Arbeitstage</label>
-            <div style={{display:"flex",gap:6,marginTop:4}}>
-              {DAYS.map(d=><div key={d.v} className={`day-chip${(form.work_days||"").split(",").includes(d.v)?" active":""}`} onClick={()=>toggleDay(d.v)}>{d.l}</div>)}
+        {isSalaried&&<>
+          {needsStart&&<>
+            <div className="field-group"><label className="label">Arbeitstage</label>
+              <div style={{display:"flex",gap:6,marginTop:4}}>
+                {DAYS.map(d=><div key={d.v} className={`day-chip${(form.work_days||"").split(",").includes(d.v)?" active":""}`} onClick={()=>toggleDay(d.v)}>{d.l}</div>)}
+              </div>
             </div>
-            <div className="pw-hint">{calcWorkdaysInYear()} Arbeitstage im {new Date().getFullYear()} (nach Feiertagen)</div>
-          </div>
-          <div className="grid-2">
-            <div className="field-group"><label className="label">Jahreskapazität Brutto (Stunden)</label><input className="input" type="number" min="0" step="0.5" placeholder="z.B. 1900" value={form.annual_hours} onChange={e=>onAnnualChange(e.target.value)}/>{(()=>{const ah=parseFloat(form.annual_hours);const dh=parseFloat(form.daily_hours);const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const hdays=(holidays||[]).filter(h=>h.year===new Date().getFullYear()).length*pensum;if(!ah||!dh)return null;const netto=Math.round((ah-hdays*dh)*10)/10;return<div className="pw-hint">Netto nach Feiertagen: <b>{netto}h</b> (−{Math.round(hdays*dh*10)/10}h)</div>;})()}</div>
-            <div className="field-group"><label className="label">Sollstunden / Tag</label><input className="input" type="number" min="0" max="24" step="0.01" placeholder="z.B. 8" value={form.daily_hours} onChange={e=>onDailyChange(e.target.value)}/></div>
-          </div>
-          <div className="grid-2">
-            <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{(()=>{const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const effective=Math.round((parseFloat(form.vacation_days_per_year)||25)*pensum*10)/10;return pensum<1?<div className="pw-hint">Bei {wd.length}/5 Tagen → effektiv <b>{effective} Tage</b>/Jahr</div>:null;})()}</div>
-          </div>
-          {existing&&(()=>{
-            const uPh=pensumHistory.filter(h=>h.user_id===existing.id).sort((a,b)=>a.valid_from.localeCompare(b.valid_from));
-            if(!uPh.length)return null;
+            <div className="field-group"><label className="label">Vollzeit h/Woche (100%) *</label><input className="input" type="number" min="0" max="80" step="0.25" placeholder="z.B. 41.25" value={form.weekly_hours} onChange={e=>f("weekly_hours")(e.target.value)}/>{startPensum&&<div className="pw-hint">{Math.round(effectiveWD.length/5*100)}% → <b>{Math.round(startWeekly*effectiveWD.length/5*100)/100}h/Wo</b> · {startPensum.daily_hours}h pro Arbeitstag</div>}</div>
+          </>}
+          {capacity&&<div className="pw-hint" style={{fontSize:12}}>Kapazität {curY}: <b>{capacity.bruttoH}h</b> brutto − {capacity.holidayDays}T Feiertage ({capacity.holidayH}h) = <b>{capacity.nettoH}h netto</b></div>}
+          <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{effectiveWD.length<5&&<div className="pw-hint">Bei {effectiveWD.length}/5 Tagen → effektiv <b>{Math.round((parseFloat(form.vacation_days_per_year)||25)*effectiveWD.length/5*10)/10} Tage</b>/Jahr</div>}</div>
+          {!needsStart&&(()=>{
             return<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}>
               <div className="label" style={{marginBottom:8}}>Pensum-Verlauf</div>
               {uPh.map(h=>{
@@ -620,6 +623,7 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
                       <div className="field-group"><label className="label">Arbeitstage</label><div style={{display:"flex",gap:4}}>{[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"}].map(d=>{const active=(editPensumDraft.work_days||"").split(",").includes(d.v);return<div key={d.v} className={`day-chip${active?" active":""}`} style={{padding:"4px 8px",fontSize:12,cursor:"pointer",userSelect:"none"}} onClick={()=>{const days=(editPensumDraft.work_days||"").split(",").filter(Boolean);const nd=active?days.filter(x=>x!==d.v):[...days,d.v].sort();setEditPensumDraft(p=>({...p,work_days:nd.join(",")}));}}>{d.l}</div>})}</div>
                       {ewh&&ewdC?<div className="pw-hint">{Math.round(ewdC/5*100)}% → <b>{Math.round(ewh*ewdC/5*10)/10}h/Wo</b></div>:null}
                       </div>
+                    </div>
                     <div style={{display:"flex",gap:6,marginTop:8}}>
                       <button className="btn btn-primary" style={{padding:"6px 12px",fontSize:12}} onClick={async()=>{if(!editPensumDraft.weekly_hours)return;const wd2=editPensumDraft.work_days||"1,2,3,4,5";const wdC2=wd2.split(",").filter(Boolean).length||1;const dailyH=Math.round(parseFloat(editPensumDraft.weekly_hours)/5*100)/100;await onUpdatePensum(h.id,{daily_hours:dailyH,work_days:wd2});setEditingPensumId(null);}}>Speichern</button>
                       <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>setEditingPensumId(null)}>Abbrechen</button>
@@ -644,7 +648,7 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
               })}
             </div>;
           })()}
-          {existing&&<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}>
+          {!needsStart&&<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}>
             <div className="label" style={{marginBottom:10}}>Pensum-Änderung (optional)</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>
               <div className="field-group"><label className="label">Gültig ab</label><div style={{display:"flex",gap:6}}>
@@ -668,15 +672,15 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
   );
 }
 
-function EntryModal({existing,projects,activities,products,onSave,onClose,onStartInForm,swRunning,swSeconds,swTimerId,swStartWith,swPause,swStopClean}){
+function EntryModal({existing,projects,activities,products,onSave,onClose,onStartInForm,swRunning,swSeconds,swTimerId,swStopClean,timerLinked}){
   const [form,setForm]=useState(existing?{date:existing.date,project:existing.project,activity:existing.activity,product:existing.product||"",hours:String(Math.floor(existing.total_min/60)),minutes:String(existing.total_min%60),note:existing.note||""}:{date:todayStr(),project:"",activity:"",product:"",hours:"",minutes:"",note:""});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const save=async()=>{
     if(!form.project||!form.activity||(!form.hours&&!form.minutes)){setErr("Bitte Projekt, Tätigkeit und Zeit ausfüllen.");return;}
     let totalMin=(parseInt(form.hours||0)*60)+parseInt(form.minutes||0);
     if(totalMin<=0){setErr("Zeit muss grösser als 0 sein.");return;}
-    // Laufenden/pausierten Timer stoppen und Zeit einrechnen
-    if(swRunning||(!swRunning&&swTimerId)){const elapsed=await swStopClean();totalMin+=Math.round(elapsed/60);}
+    // Timer nur einrechnen, wenn er zu genau diesem Eintrag gehört
+    if(timerLinked){const elapsed=await swStopClean();totalMin+=Math.round(elapsed/60);}
     setSaving(true);try{await onSave({...form,totalMin});}catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
   const handleSwStop=async()=>{
@@ -709,7 +713,8 @@ function EntryModal({existing,projects,activities,products,onSave,onClose,onStar
             <button className="btn-start" style={{padding:"8px 16px",fontSize:13}} disabled={!form.project||!form.activity||swRunning} onClick={()=>onStartInForm&&onStartInForm(existing)}>▶ Im Erfassungsbereich fortführen</button>
           </div>
           {!form.project&&<span style={{fontSize:11,color:"#8890b8"}}>Zuerst Projekt & Tätigkeit wählen</span>}
-          {swActive&&<span style={{fontSize:11,color:"#ffbe32"}}>⏱ Laufende Zeit wird beim Speichern automatisch eingerechnet</span>}
+          {timerLinked&&<span style={{fontSize:11,color:"#ffbe32"}}>⏱ Laufende Zeit wird beim Speichern automatisch eingerechnet</span>}
+          {swActive&&!timerLinked&&<span style={{fontSize:11,color:"#8890b8"}}>Die Stoppuhr läuft für einen anderen Eintrag und wird hier nicht eingerechnet.</span>}
         </div>
         <div className="field-group"><label className="label">Produkt <span style={{color:"#8890b8",fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label><Autocomplete value={form.product} onChange={v=>setForm(f=>({...f,product:v}))} options={products} placeholder="Produkt suchen…"/></div>
         <div className="field-group"><label className="label">Bemerkung</label><textarea className="input" rows={2} placeholder="Optionale Bemerkung…" value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
@@ -845,7 +850,8 @@ export default function App(){
   const [formMsg,setFormMsg]=useState(null);
   const [selectedDate,setSelectedDate]=useState(todayStr());
   const [inlineForm,setInlineForm]=useState(()=>{
-    try{const s=localStorage.getItem(FORM_KEY);return s?{...JSON.parse(s),date:todayStr()}:emptyForm();}catch{return emptyForm();}
+    // Beim Fortführen eines bestehenden Eintrags dessen Datum behalten, sonst immer heute
+    try{const s=localStorage.getItem(FORM_KEY);if(!s)return emptyForm();const p=JSON.parse(s);return localStorage.getItem(EDIT_ID_KEY)?p:{...p,date:todayStr()};}catch{return emptyForm();}
   });
   const [inlineSaving,setInlineSaving]=useState(false);
 
@@ -1049,7 +1055,7 @@ export default function App(){
   const logout=()=>{setCurrentUser(null);setDataReady(false);try{sessionStorage.removeItem("ze_session");}catch{}};
 
   const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
-    if(isEdit&&entryModal){const savedId=entryModal.id;const updated=await sb.update("entries",savedId,{date,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===savedId?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);setInlineEditId(prev=>prev===savedId?null:prev);setInlineForm(f=>({...f,hours:"0",minutes:"0"}));}
+    if(isEdit&&entryModal){const savedId=entryModal.id;const updated=await sb.update("entries",savedId,{date,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===savedId?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);if(String(inlineEditId)===String(savedId)){setInlineEditId(null);setInlineForm(emptyForm());}}
     else{const created=await sb.insert("entries",{date,employee_id:currentUser.id,employee_name:currentUser.name,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>[created[0],...prev]);setFormMsg({type:"success",text:"✓ Eintrag gespeichert!"});}
     setTimeout(()=>setFormMsg(null),2500);
   };
@@ -1061,7 +1067,7 @@ export default function App(){
     try{
       if(inlineEditId){
         const updated=await sb.update("entries",inlineEditId,{date:inlineForm.date,project:inlineForm.project,activity:inlineForm.activity,product:inlineForm.product||null,total_min:totalMin,note:inlineForm.note||null});
-        setEntries(prev=>prev.map(e=>e.id===inlineEditId?updated[0]:e));
+        setEntries(prev=>prev.map(e=>String(e.id)===String(inlineEditId)?updated[0]:e));
         setInlineEditId(null);
         setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});
       } else {
@@ -1142,17 +1148,20 @@ export default function App(){
   const addProduct=async()=>{if(!newProduct.trim())return;try{await sb.insert("products",{name:newProduct.trim()});setProducts(prev=>[...prev,newProduct.trim()].sort());setNewProduct("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProduct=async(name)=>{try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const saveUser=async(data)=>{
+    const base={name:data.name,username:data.username,role:data.role,employment_type:data.employment_type||"hourly",vacation_days_per_year:data.vacation_days_per_year||25,...(data.startPensum?{daily_hours:data.startPensum.daily_hours,work_days:data.startPensum.work_days}:{})};
+    let userId;
     if(userModal&&userModal!=="new"){
-      const updated=await sb.update("users",userModal.id,{name:data.name,username:data.username,role:data.role,password:data.password||userModal.password,employment_type:data.employment_type||"hourly",daily_hours:data.daily_hours??null,annual_hours:data.annual_hours??null,work_days:data.work_days||"1,2,3,4,5",vacation_days_per_year:data.vacation_days_per_year||25});
-      const merged={...updated[0],annual_hours:data.annual_hours??null,daily_hours:data.daily_hours??null};
-      setUsers(prev=>prev.map(u=>u.id===userModal.id?merged:u));
+      const updated=await sb.update("users",userModal.id,{...base,password:data.password||userModal.password});
+      setUsers(prev=>prev.map(u=>u.id===userModal.id?updated[0]:u));
       if(currentUser.id===userModal.id){const f=updated[0];setCurrentUser(f);try{sessionStorage.setItem("ze_session",JSON.stringify(f));}catch{}}
-      if(data.pensumChange){const pc=data.pensumChange;const wdCount=(pc.work_days||"1,2,3,4,5").split(",").filter(Boolean).length||1;const dailyH=Math.round(parseFloat(pc.weekly_hours)/5*100)/100;const r=await sb.insert("pensum_history",{user_id:userModal.id,valid_from:pc.valid_from,daily_hours:dailyH,work_days:pc.work_days||"1,2,3,4,5"});setPensumHistory(prev=>[...prev,r[0]]);}
+      userId=userModal.id;
     }else{
-      const c=await sb.insert("users",data);
+      const c=await sb.insert("users",{...base,password:data.password});
       setUsers(prev=>[...prev,c[0]]);
-      if(data.employment_type==="salaried"&&data.daily_hours){const r=await sb.insert("pensum_history",{user_id:c[0].id,valid_from:"2000-01-01",daily_hours:data.daily_hours,work_days:data.work_days||"1,2,3,4,5"}).catch(()=>null);if(r)setPensumHistory(prev=>[...prev,r[0]]);}
+      userId=c[0].id;
     }
+    if(data.startPensum){const r=await sb.insert("pensum_history",{user_id:userId,valid_from:"2000-01-01",...data.startPensum});setPensumHistory(prev=>[...prev,r[0]]);}
+    if(data.pensumChange){const pc=data.pensumChange;const dailyH=Math.round(parseFloat(pc.weekly_hours)/5*100)/100;const r=await sb.insert("pensum_history",{user_id:userId,valid_from:pc.valid_from,daily_hours:dailyH,work_days:pc.work_days||"1,2,3,4,5"});setPensumHistory(prev=>[...prev,r[0]]);}
     setUserModal(null);
   };
   const deleteUser=async(id)=>{if(id===currentUser.id||!window.confirm("Benutzer löschen?"))return;try{await sb.remove("users",id);setUsers(prev=>prev.filter(u=>u.id!==id));}catch(e){alert("Fehler: "+e.message);}};
@@ -1176,16 +1185,9 @@ export default function App(){
     if(!absenceForm.dateFrom||!absenceForm.dateTo)return;
     setAbsenceSaving(true);
     try{
-      const myUser=users.find(u=>u.id===currentUser.id);
-      const wd=parseWorkDays(myUser?.work_days);
-      const from=new Date(absenceForm.dateFrom),to=new Date(absenceForm.dateTo);
-      if(from>to){alert("'Von' muss vor 'Bis' liegen.");return;}
-      const dates=[];
-      for(let d=new Date(from);d<=to;d.setDate(d.getDate()+1)){
-        const dow=d.getDay()||7;
-        if(wd.includes(dow))dates.push(d.toISOString().slice(0,10));
-      }
-      if(!dates.length){alert("Keine Arbeitstage im gewählten Zeitraum.");return;}
+      if(absenceForm.dateFrom>absenceForm.dateTo){alert("'Von' muss vor 'Bis' liegen.");return;}
+      const {dates}=absenceDatesFor(currentUser.id,absenceForm.dateFrom,absenceForm.dateTo);
+      if(!dates.length){alert("Keine Arbeitstage im gewählten Zeitraum (Feiertage werden nicht erfasst).");return;}
       const results=await Promise.all(dates.map(date=>sb.insert("absences",{user_id:currentUser.id,date,type:absenceForm.type,note:absenceForm.note||null})));
       setAbsences(prev=>[...results.map(r=>r[0]),...prev]);
       setAbsenceForm(f=>({...f,dateFrom:todayStr(),dateTo:todayStr()}));
@@ -1198,17 +1200,27 @@ export default function App(){
   const deleteAbsence=async(id)=>{try{await sb.remove("absences",id);setAbsences(prev=>prev.filter(a=>a.id!==id));}catch(e){alert("Fehler: "+e.message);}};
 
   // ─── Arbeitszeit-Helpers ───────────────────────────────────────────────────
-  const parseWorkDays=wd=>(wd||"1,2,3,4,5").split(",").map(Number);
+  const parseWorkDays=parseWD;
 
   // Gibt daily_hours und work_days für einen bestimmten Monat zurück (laut Pensum-Verlauf)
   const getPensumForMonth=useCallback((userId,month,year)=>{
     const user=users.find(u=>u.id===userId);
     if(!user)return null;
-    const monthFirst=`${year}-${String(month+1).padStart(2,"0")}-01`;
-    const history=pensumHistory.filter(h=>h.user_id===userId&&h.valid_from<=monthFirst).sort((a,b)=>b.valid_from.localeCompare(a.valid_from));
-    if(history.length>0)return{daily_hours:history[0].daily_hours,work_days:history[0].work_days};
-    return{daily_hours:user.daily_hours,work_days:user.work_days};
+    return pensumAt(pensumHistory,user,month,year);
   },[users,pensumHistory]);
+
+  // Arbeitstage eines Zeitraums laut Pensum, ohne Feiertage
+  const absenceDatesFor=(userId,dateFrom,dateTo)=>{
+    const holidaySet=new Set(holidays.map(h=>h.date));
+    const dates=[],skipped=[];
+    for(let d=new Date(dateFrom+"T12:00:00");fmtYMD(d)<=dateTo;d.setDate(d.getDate()+1)){
+      const wd=parseWorkDays(getPensumForMonth(userId,d.getMonth(),d.getFullYear())?.work_days);
+      if(!wd.includes(d.getDay()||7))continue;
+      const ds=fmtYMD(d);
+      if(holidaySet.has(ds))skipped.push(ds);else dates.push(ds);
+    }
+    return{dates,skipped};
+  };
 
   const calcVacBalance=useCallback((userId)=>{
     const user=users.find(u=>u.id===userId);
@@ -1231,7 +1243,7 @@ export default function App(){
     const pensumNow=wdNow.length/5;
     const usedFrei=absences.filter(a=>a.user_id===userId&&a.type==="frei").length;
     const sickDays=absences.filter(a=>a.user_id===userId&&a.type==="krank").length;
-    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear).length*pensumNow;
+    const holidayDaysThisYear=holidays.filter(h=>h.year===curYear&&isWeekdayHoliday(h)).length*pensumNow;
     const vacPerYear=parseFloat(user.vacation_days_per_year||25)*pensumNow;
     return{total:totalDays,used:usedFrei,remaining:totalDays-usedFrei,sick:sickDays,holidayDaysThisYear,vacPerYear};
   },[users,absences,holidays,entries,getPensumForMonth]);
@@ -1249,7 +1261,7 @@ export default function App(){
     const cutoffStr=cutoffDay?`${monthStr}-${String(lastDay).padStart(2,"0")}`:null;
     let workDays=0;
     for(let d=1;d<=lastDay;d++){const dow=(new Date(year,month,d).getDay())||7;if(wd.includes(dow))workDays++;}
-    const holidaysInMonth=holidays.filter(h=>{const d=new Date(h.date);return d.getFullYear()===year&&d.getMonth()===month&&(!cutoffStr||h.date<=cutoffStr);}).length*pensum;
+    const holidaysInMonth=holidays.filter(h=>{const d=new Date(h.date);return d.getFullYear()===year&&d.getMonth()===month&&(!cutoffStr||h.date<=cutoffStr)&&isWeekdayHoliday(h);}).length*pensum;
     const freiInMonth=absences.filter(a=>a.user_id===userId&&a.type==="frei"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
     const krankInMonth=absences.filter(a=>a.user_id===userId&&a.type==="krank"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
     const unbezahltInMonth=absences.filter(a=>a.user_id===userId&&a.type==="unbezahlt"&&a.date.startsWith(monthStr)&&(!cutoffStr||a.date<=cutoffStr)).length;
@@ -1318,7 +1330,7 @@ export default function App(){
     <div style={{minHeight:"100vh",background:"#0a0c13",color:"#e0e4f8"}}>
       <style>{CSS}</style>
       {userModal&&<UserModal existing={userModal==="new"?null:userModal} onSave={saveUser} onClose={()=>setUserModal(null)} holidays={holidays} pensumHistory={pensumHistory} onDeletePensum={async(id)=>{try{await sb.remove("pensum_history",id);setPensumHistory(prev=>prev.filter(h=>h.id!==id));}catch(e){alert("Fehler: "+e.message);}}} onUpdatePensum={async(id,data)=>{try{const r=await sb.update("pensum_history",id,data);setPensumHistory(prev=>prev.map(h=>h.id===id?{...h,...r[0]}:h));}catch(e){alert("Fehler: "+e.message);}}}/>}
-      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} onStartInForm={swStartFromEntry} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStartWith={swStartWith} swPause={swPause} swStopClean={swStopClean}/>}
+      {entryModal&&<EntryModal existing={entryModal} projects={projects} activities={activities} products={products} onSave={(d)=>saveEntry(d,true)} onClose={()=>setEntryModal(null)} onStartInForm={swStartFromEntry} swRunning={swRunning} swSeconds={swSeconds} swTimerId={swTimerId} swStopClean={swStopClean} timerLinked={!!(swRunning||swTimerId)&&String(inlineEditId)===String(entryModal.id)}/>}
       {pwModal&&<PwModal onSave={changePassword} onClose={()=>setPwModal(false)}/>}
       {projektAuswahlOpen&&(
         <ProjektAuswahlModal
@@ -1400,13 +1412,15 @@ export default function App(){
                     </div>
                     {(()=>{
                       const u=users.find(u=>u.id===currentUser?.id);
-                      if(!u||u.employment_type!=="salaried"||!u.daily_hours)return null;
-                      const wd=parseWorkDays(u.work_days);
+                      if(!u||u.employment_type!=="salaried")return null;
                       const d=new Date(inlineForm.date+"T12:00:00");
+                      const pm=getPensumForMonth(u.id,d.getMonth(),d.getFullYear());
+                      if(!pm?.daily_hours)return null;
+                      const wd=parseWorkDays(pm.work_days);
                       const dow=d.getDay()||7;
                       const isWorkDay=wd.includes(dow);
                       const isHoliday=holidays.some(h=>h.date===inlineForm.date);
-                      const sollMin=(isWorkDay&&!isHoliday)?Math.round(u.daily_hours*60):0;
+                      const sollMin=(isWorkDay&&!isHoliday)?Math.round(pm.daily_hours*60):0;
                       const diff=dayTotal-sollMin;
                       return<div style={{fontSize:11,color:"#8890b8",marginTop:3}}>Soll: <span style={{color:"#9aa2c8",fontFamily:"'DM Mono',monospace"}}>{fmtTime(sollMin)}</span>{dayTotal>0&&sollMin>0&&<span style={{marginLeft:6,fontWeight:700,color:diff>=0?"#4dffaa":"#ff6b85"}}>{diff>=0?"+":""}{fmtTime(Math.abs(diff))}</span>}</div>;
                     })()}
@@ -1505,7 +1519,7 @@ export default function App(){
                     <div className="balance-row"><span style={{color:"#8890b8"}}>Anspruch total (kumuliert)</span><strong>{bal.total.toFixed(1)} Tage</strong></div>
                     <div className="balance-row"><span style={{color:"#8890b8"}}>Davon Ferientage/Jahr</span><span>{bal.vacPerYear.toFixed(1)} Tage × {new Date().getFullYear()-Math.max(0,new Date().getFullYear()-1)+1} Jahr(e)</span></div>
                     <div className="balance-row"><span style={{color:"#8890b8"}}>Feiertage {new Date().getFullYear()} (auf Arbeitstagen)</span><span>{bal.holidayDaysThisYear.toFixed(1)} Tage</span></div>
-                    <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen (Frei)</span><span style={{color:"#ff6b85"}}>−{bal.used.toFixed(1)} Tage</span></div>
+                    <div className="balance-row"><span style={{color:"#8890b8"}}>Bezogen (Ferien)</span><span style={{color:"#ff6b85"}}>−{bal.used.toFixed(1)} Tage</span></div>
                     <div style={{borderTop:"1px solid rgba(79,93,232,0.2)",paddingTop:8,marginTop:4}} className="balance-row">
                       <span style={{fontWeight:700}}>Verbleibend</span>
                       <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa",fontSize:16}}>{bal.remaining.toFixed(1)} Tage</strong>
@@ -1519,7 +1533,7 @@ export default function App(){
                     <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Bis</label><input type="date" className="input" value={absenceForm.dateTo} min={absenceForm.dateFrom} onChange={e=>setAbsenceForm(f=>({...f,dateTo:e.target.value}))}/></div>
                     <div className="field-group" style={{flex:"1 1 120px"}}><label className="label">Typ</label>
                       <select className="input" value={absenceForm.type} onChange={e=>setAbsenceForm(f=>({...f,type:e.target.value}))}>
-                        <option value="frei">Frei (Ferien/Feiertag)</option>
+                        <option value="frei">Ferien</option>
                         <option value="krank">Krank</option>
                         <option value="unbezahlt">Unbezahlter Urlaub</option>
                       </select>
@@ -1527,12 +1541,11 @@ export default function App(){
                     <div className="field-group" style={{flex:"2 1 160px"}}><label className="label">Bemerkung</label><input className="input" placeholder="Optional…" value={absenceForm.note} onChange={e=>setAbsenceForm(f=>({...f,note:e.target.value}))}/></div>
                     <button className="btn btn-primary" style={{flexShrink:0,padding:"11px 20px"}} onClick={addAbsence} disabled={absenceSaving}>{absenceSaving?"…":"+ Erfassen"}</button>
                   </div>
-                  {absenceForm.dateFrom&&absenceForm.dateTo&&absenceForm.dateTo>absenceForm.dateFrom&&(()=>{
-                    const myUser=users.find(u=>u.id===currentUser?.id);
-                    const wd=parseWorkDays(myUser?.work_days);
-                    let count=0;
-                    for(let d=new Date(absenceForm.dateFrom);d<=new Date(absenceForm.dateTo);d.setDate(d.getDate()+1)){if(wd.includes(d.getDay()||7))count++;}
-                    return<div style={{fontSize:12,color:"#8890b8",marginTop:4}}>→ {count} Arbeitstag{count!==1?"e":""} werden erfasst</div>;
+                  {absenceForm.dateFrom&&absenceForm.dateTo&&absenceForm.dateTo>=absenceForm.dateFrom&&(()=>{
+                    const {dates,skipped}=absenceDatesFor(currentUser.id,absenceForm.dateFrom,absenceForm.dateTo);
+                    if(!skipped.length&&absenceForm.dateTo===absenceForm.dateFrom)return null;
+                    const fmtDM=ds=>`${parseInt(ds.substring(8,10))}.${parseInt(ds.substring(5,7))}.`;
+                    return<div style={{fontSize:12,color:"#8890b8",marginTop:4}}>→ {dates.length} Arbeitstag{dates.length!==1?"e":""} werden erfasst{skipped.length>0&&<span style={{color:"#ffbe32"}}> ({skipped.length} Feiertag{skipped.length!==1?"e":""} übersprungen: {skipped.map(fmtDM).join(", ")})</span>}</div>;
                   })()}
                 </div>
                 {myAbsences.length>0&&<div className="card" style={{padding:0,overflow:"hidden"}}>
@@ -1541,7 +1554,7 @@ export default function App(){
                     <tbody>{myAbsences.map(a=>(
                       <tr key={a.id}>
                         <td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{a.date}</td>
-                        <td><span className={a.type==="frei"?"badge-frei":a.type==="krank"?"badge-krank":"badge-unbezahlt"}>{a.type==="frei"?"Frei":a.type==="krank"?"Krank":"Unbezahlt"}</span></td>
+                        <td><span className={a.type==="frei"?"badge-frei":a.type==="krank"?"badge-krank":"badge-unbezahlt"}>{a.type==="frei"?"Ferien":a.type==="krank"?"Krank":"Unbezahlt"}</span></td>
                         <td className="hide-mobile" style={{color:"#8890b8"}}>{a.note||"—"}</td>
                         <td style={{textAlign:"right"}}><button className="btn-danger" onClick={()=>deleteAbsence(a.id)}>✕</button></td>
                       </tr>
@@ -1653,34 +1666,12 @@ export default function App(){
                         // Soll/Ist für den gewählten Zeitraum (Von–Bis) summieren
                         const fYM=toYM(fromYear,fromMonth),tYM=toYM(curY,curM);
                         const si=rb?rb.months.filter(m=>toYM(m.year,m.month)>=fYM&&toYM(m.year,m.month)<=tYM).reduce((a,m)=>({sollMin:a.sollMin+m.sollMin,istMin:a.istMin+m.istMin,diff:a.diff+m.diff}),{sollMin:0,istMin:0,diff:0}):null;
-                        let bruttoH=0,holidayH=0,holidayDaysProrated=0;
-                        if(u.annual_hours!=null){
-                          bruttoH=parseFloat(u.annual_hours);
-                          const dh=parseFloat(u.daily_hours)||0;
-                          holidayDaysProrated=Math.round((bal?.holidayDaysThisYear||0)*10)/10;
-                          holidayH=Math.round(holidayDaysProrated*dh*10)/10;
-                        }else{
-                          for(let mo=0;mo<12;mo++){
-                            const pm=getPensumForMonth(u.id,mo,curY);
-                            const wdMo=parseWorkDays(pm?.work_days||u.work_days);
-                            const pensum=wdMo.length/5;
-                            const dh=parseFloat(pm?.daily_hours||u.daily_hours)||0;
-                            for(let d=new Date(curY,mo,1);d.getMonth()===mo;d.setDate(d.getDate()+1)){const dow=d.getDay()||7;if(wdMo.includes(dow))bruttoH+=dh;}
-                            const hInMonth=holidays.filter(h=>new Date(h.date).getFullYear()===curY&&new Date(h.date).getMonth()===mo).length;
-                            holidayDaysProrated+=hInMonth*pensum;
-                            holidayH+=hInMonth*pensum*dh;
-                          }
-                          bruttoH=Math.round(bruttoH*10)/10;
-                          holidayH=Math.round(holidayH*10)/10;
-                          holidayDaysProrated=Math.round(holidayDaysProrated*10)/10;
-                        }
-                        const capacityH=bruttoH;
-                        const holidayDays=holidayDaysProrated;
+                        const cap=calcYearCapacity(u,pensumHistory,holidays,curY);
                         const monColor=si?(si.diff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         const cumColor=rb?(rb.cumulativeDiff>=0?"#4dffaa":"#ff6b85"):"#8890b8";
                         return(<tr key={u.id} style={{borderTop:"1px solid #1e2235"}}>
                           <td style={{padding:"8px 8px",fontSize:13,fontWeight:600}}>{u.name}</td>
-                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{capacityH}h<span style={{fontSize:10,color:"#8890b8"}}> Brutto</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {holidayDays}T Feiertage ({holidayH}h)</div><div style={{fontSize:11,color:"#e0e4f8",marginTop:2}}>{Math.round((capacityH-holidayH)*10)/10}h Netto</div></td>
+                          <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#7c8bff"}}>{cap.bruttoH}h<span style={{fontSize:10,color:"#8890b8"}}> Brutto</span><div style={{fontSize:10,color:"#8890b8",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>− {cap.holidayDays}T Feiertage ({cap.holidayH}h)</div><div style={{fontSize:11,color:"#e0e4f8",marginTop:2}}>{cap.nettoH}h Netto</div></td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:"#9aa2c8"}}>{si?fmtTime(si.sollMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12}}>{si?fmtTime(si.istMin):"—"}</td>
                           <td style={{padding:"8px 8px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:monColor}}>{si?(si.diff>=0?"+":"")+fmtTime(Math.abs(si.diff)):"—"}</td>
@@ -1770,7 +1761,7 @@ export default function App(){
                   return(
                     <div style={{padding:"12px 16px",borderTop:"1px solid #1e2235",display:"flex",gap:24,flexWrap:"wrap"}}>
                       <div style={{fontSize:12,color:"#8890b8"}}>Ferienguthaben: <strong style={{color:bal.remaining<0?"#ff6b85":bal.remaining<5?"#ffbe32":"#4dffaa"}}>{bal.remaining.toFixed(1)} Tage verbleibend</strong> ({bal.used}/{bal.total.toFixed(1)} bezogen)</div>
-                      {monthAbsences.length>0&&<div style={{fontSize:12,color:"#8890b8"}}>Abwesenheiten {MONTHS[abschlussMonth]}: {monthAbsences.filter(a=>a.type==="frei").length} Frei, {monthAbsences.filter(a=>a.type==="krank").length} Krank</div>}
+                      {monthAbsences.length>0&&<div style={{fontSize:12,color:"#8890b8"}}>Abwesenheiten {MONTHS[abschlussMonth]}: {monthAbsences.filter(a=>a.type==="frei").length} Ferien,{monthAbsences.filter(a=>a.type==="krank").length} Krank</div>}
                     </div>
                   );
                 })()}
@@ -1898,6 +1889,17 @@ export default function App(){
                   <button className="btn btn-primary" style={{padding:"9px 16px",fontSize:13}} onClick={()=>fetchHolidays(holidayYear)}>↻ Feiertage laden</button>
                   <span style={{fontSize:12,color:"#8890b8"}}>{holidays.filter(h=>h.year===holidayYear).length} Einträge für {holidayYear}</span>
                 </div>
+                {(()=>{
+                  const holidayDates=new Set(holidays.map(h=>h.date));
+                  const onHoliday=absences.filter(a=>a.type==="frei"&&holidayDates.has(a.date));
+                  if(!onHoliday.length)return null;
+                  const nameOf=id=>users.find(u=>u.id===id)?.name||"?";
+                  return<div className="msg-error" style={{marginBottom:16,display:"flex",flexDirection:"column",gap:8}}>
+                    <div><b>{onHoliday.length} Ferien-Eintrag{onHoliday.length!==1?"e liegen":" liegt"} auf Feiertagen.</b> Diese Tage werden sonst doppelt gezählt (Ferientag abgezogen und Feiertag reduziert das Soll).</div>
+                    <div style={{fontSize:12,color:"#9aa2c8"}}>{onHoliday.map(a=>`${nameOf(a.user_id)} ${a.date}`).join(" · ")}</div>
+                    <div><button className="btn-danger" onClick={async()=>{if(!window.confirm(`${onHoliday.length} Ferien-Einträge auf Feiertagen entfernen?`))return;try{await Promise.all(onHoliday.map(a=>sb.remove("absences",a.id)));const ids=new Set(onHoliday.map(a=>a.id));setAbsences(prev=>prev.filter(a=>!ids.has(a.id)));}catch(e){alert("Fehler: "+e.message);}}}>Entfernen</button></div>
+                  </div>;
+                })()}
                 <div style={{marginBottom:16}}>
                   {holidays.filter(h=>h.year===holidayYear).map(h=>(
                     <div key={h.id} className="mgmt-list-item">
