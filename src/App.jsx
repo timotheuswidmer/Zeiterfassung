@@ -526,6 +526,7 @@ function LoginScreen({onLogin}){
 function UserModal({existing,onSave,onClose,holidays}){
   const DAYS=[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"},{v:"6",l:"Sa"},{v:"7",l:"So"}];
   const [form,setForm]=useState(existing?{...existing,password:"",work_days:existing.work_days||"1,2,3,4,5",employment_type:existing.employment_type||"hourly",daily_hours:existing.daily_hours!=null?String(existing.daily_hours):"",annual_hours:existing.annual_hours!=null?String(existing.annual_hours):"",vacation_days_per_year:existing.vacation_days_per_year!=null?String(existing.vacation_days_per_year):"25"}:{name:"",username:"",password:"",role:"employee",employment_type:"hourly",daily_hours:"",annual_hours:"",work_days:"1,2,3,4,5",vacation_days_per_year:"25"});
+  const [pensumChange,setPensumChange]=useState({valid_from:"",weekly_hours:"",work_days:existing?.work_days||"1,2,3,4,5"});
   const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
   const f=k=>v=>setForm(p=>({...p,[k]:v}));
   const toggleDay=v=>{const days=(form.work_days||"").split(",").filter(Boolean);const nd=days.includes(v)?days.filter(d=>d!==v):[...days,v].sort();setForm(p=>({...p,work_days:nd.join(",")}));};
@@ -564,7 +565,7 @@ function UserModal({existing,onSave,onClose,holidays}){
     if(!form.name.trim()||!form.username.trim()){setErr("Name und Benutzername sind Pflicht.");return;}
     if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}
     setSaving(true);
-    try{await onSave({...form,name:form.name.trim(),username:form.username.trim().toLowerCase(),password:form.password.trim()||existing?.password,daily_hours:form.daily_hours?parseFloat(form.daily_hours):null,annual_hours:form.annual_hours?parseFloat(form.annual_hours):null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25});}
+    try{await onSave({...form,name:form.name.trim(),username:form.username.trim().toLowerCase(),password:form.password.trim()||existing?.password,daily_hours:form.daily_hours?parseFloat(form.daily_hours):null,annual_hours:form.annual_hours?parseFloat(form.annual_hours):null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25,pensumChange:pensumChange.valid_from&&pensumChange.weekly_hours?pensumChange:null});}
     catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
   return(
@@ -597,6 +598,22 @@ function UserModal({existing,onSave,onClose,holidays}){
           <div className="grid-2">
             <div className="field-group"><label className="label">Ferientage / Jahr (100% Basis)</label><input className="input" type="number" min="0" max="365" placeholder="25" value={form.vacation_days_per_year} onChange={e=>f("vacation_days_per_year")(e.target.value)}/>{(()=>{const wd=(form.work_days||"1,2,3,4,5").split(",").filter(Boolean);const pensum=wd.length/5;const effective=Math.round((parseFloat(form.vacation_days_per_year)||25)*pensum*10)/10;return pensum<1?<div className="pw-hint">Bei {wd.length}/5 Tagen → effektiv <b>{effective} Tage</b>/Jahr</div>:null;})()}</div>
           </div>
+          {existing&&<div style={{borderTop:"1px solid #1e2235",paddingTop:14,marginTop:4}}>
+            <div className="label" style={{marginBottom:10}}>Pensum-Änderung (optional)</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>
+              <div className="field-group"><label className="label">Gültig ab</label><div style={{display:"flex",gap:6}}>
+                <select className="input" style={{flex:1}} value={pensumChange.valid_from?pensumChange.valid_from.substring(5,7):""} onChange={e=>{const y=pensumChange.valid_from?pensumChange.valid_from.substring(0,4):String(new Date().getFullYear());setPensumChange(p=>({...p,valid_from:e.target.value?`${y}-${e.target.value}-01`:""}))}}>
+                  <option value="">Monat</option>{MONTHS.map((mn,i)=><option key={i} value={String(i+1).padStart(2,"0")}>{mn}</option>)}
+                </select>
+                <select className="input" style={{width:80}} value={pensumChange.valid_from?pensumChange.valid_from.substring(0,4):""} onChange={e=>{const mo=pensumChange.valid_from?pensumChange.valid_from.substring(5,7):"01";setPensumChange(p=>({...p,valid_from:e.target.value?`${e.target.value}-${mo}-01`:""}))}}>
+                  <option value="">Jahr</option>{Array.from({length:10},(_,i)=>new Date().getFullYear()-2+i).map(y=><option key={y} value={y}>{y}</option>)}
+                </select>
+              </div></div>
+              <div className="field-group" style={{minWidth:130}}><label className="label">Vollzeit h/Wo (100%)</label><input className="input" type="number" min="0" max="80" step="0.5" value={pensumChange.weekly_hours} onChange={e=>setPensumChange(p=>({...p,weekly_hours:e.target.value}))}/></div>
+              <div className="field-group"><label className="label">Arbeitstage</label><div style={{display:"flex",gap:4}}>{[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"}].map(d=>{const active=(pensumChange.work_days||"").split(",").includes(d.v);return<div key={d.v} className={`day-chip${active?" active":""}`} style={{padding:"4px 8px",fontSize:12,cursor:"pointer",userSelect:"none"}} onClick={()=>{const days=(pensumChange.work_days||"").split(",").filter(Boolean);const nd=active?days.filter(x=>x!==d.v):[...days,d.v].sort();setPensumChange(p=>({...p,work_days:nd.join(",")}));}}>{d.l}</div>})}</div>
+              {(()=>{const wh=parseFloat(pensumChange.weekly_hours);const wd=(pensumChange.work_days||"").split(",").filter(Boolean).length;if(!wh||!wd)return null;const pct=Math.round(wd/5*100);const eff=Math.round(wh*wd/5*10)/10;return<div className="pw-hint">{pct}% → <b>{eff}h/Wo</b></div>;})()}</div>
+            </div>
+          </div>}
         </>}
         {err&&<div className="msg-error">{err}</div>}
         <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}><button className="btn btn-ghost" onClick={onClose}>Abbrechen</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving?"Speichern…":"Speichern"}</button></div>
@@ -767,8 +784,6 @@ export default function App(){
   const [absences,setAbsences]=useState([]);
   const [holidays,setHolidays]=useState([]);
   const [pensumHistory,setPensumHistory]=useState([]);
-  const [expandedPensumUser,setExpandedPensumUser]=useState(null);
-  const [pensumDraft,setPensumDraft]=useState({valid_from:"",daily_hours:"",work_days:"1,2,3,4,5"});
   const [holidayYear,setHolidayYear]=useState(new Date().getFullYear());
   const [hDate,setHDate]=useState("");const [hName,setHName]=useState("");
   const [absenceForm,setAbsenceForm]=useState({dateFrom:todayStr(),dateTo:todayStr(),type:"frei",note:""});
@@ -1080,7 +1095,20 @@ export default function App(){
   const removeActivity=async(name)=>{try{const r=await sb.select("activities",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("activities",r[0].id);setActivities(prev=>prev.filter(a=>a!==name));}catch(e){alert("Fehler: "+e.message);}};
   const addProduct=async()=>{if(!newProduct.trim())return;try{await sb.insert("products",{name:newProduct.trim()});setProducts(prev=>[...prev,newProduct.trim()].sort());setNewProduct("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProduct=async(name)=>{try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
-  const saveUser=async(data)=>{if(userModal&&userModal!=="new"){const updated=await sb.update("users",userModal.id,{name:data.name,username:data.username,role:data.role,password:data.password||userModal.password,employment_type:data.employment_type||"hourly",daily_hours:data.daily_hours??null,annual_hours:data.annual_hours??null,work_days:data.work_days||"1,2,3,4,5",vacation_days_per_year:data.vacation_days_per_year||25});const merged={...updated[0],annual_hours:data.annual_hours??null,daily_hours:data.daily_hours??null};setUsers(prev=>prev.map(u=>u.id===userModal.id?merged:u));if(currentUser.id===userModal.id){const f=updated[0];setCurrentUser(f);try{sessionStorage.setItem("ze_session",JSON.stringify(f));}catch{}}}else{const c=await sb.insert("users",data);setUsers(prev=>[...prev,c[0]]);}setUserModal(null);};
+  const saveUser=async(data)=>{
+    if(userModal&&userModal!=="new"){
+      const updated=await sb.update("users",userModal.id,{name:data.name,username:data.username,role:data.role,password:data.password||userModal.password,employment_type:data.employment_type||"hourly",daily_hours:data.daily_hours??null,annual_hours:data.annual_hours??null,work_days:data.work_days||"1,2,3,4,5",vacation_days_per_year:data.vacation_days_per_year||25});
+      const merged={...updated[0],annual_hours:data.annual_hours??null,daily_hours:data.daily_hours??null};
+      setUsers(prev=>prev.map(u=>u.id===userModal.id?merged:u));
+      if(currentUser.id===userModal.id){const f=updated[0];setCurrentUser(f);try{sessionStorage.setItem("ze_session",JSON.stringify(f));}catch{}}
+      if(data.pensumChange){const pc=data.pensumChange;const wdCount=(pc.work_days||"1,2,3,4,5").split(",").filter(Boolean).length||1;const dailyH=Math.round(parseFloat(pc.weekly_hours)/5*100)/100;const r=await sb.insert("pensum_history",{user_id:userModal.id,valid_from:pc.valid_from,daily_hours:dailyH,work_days:pc.work_days||"1,2,3,4,5"});setPensumHistory(prev=>[...prev,r[0]]);}
+    }else{
+      const c=await sb.insert("users",data);
+      setUsers(prev=>[...prev,c[0]]);
+      if(data.employment_type==="salaried"&&data.daily_hours){const r=await sb.insert("pensum_history",{user_id:c[0].id,valid_from:"2000-01-01",daily_hours:data.daily_hours,work_days:data.work_days||"1,2,3,4,5"}).catch(()=>null);if(r)setPensumHistory(prev=>[...prev,r[0]]);}
+    }
+    setUserModal(null);
+  };
   const deleteUser=async(id)=>{if(id===currentUser.id||!window.confirm("Benutzer löschen?"))return;try{await sb.remove("users",id);setUsers(prev=>prev.filter(u=>u.id!==id));}catch(e){alert("Fehler: "+e.message);}};
 
   const fetchHolidays=async(year)=>{
@@ -1696,43 +1724,19 @@ export default function App(){
                   <div className="section-title" style={{marginBottom:0}}>Benutzerverwaltung</div>
                   <button className="btn btn-primary" style={{padding:"8px 14px",fontSize:13}} onClick={()=>setUserModal("new")}>+ Benutzer</button>
                 </div>
-                {users.map(u=>{
-                  const uPh=pensumHistory.filter(h=>h.user_id===u.id).sort((a,b)=>a.valid_from.localeCompare(b.valid_from));
-                  const isExpanded=expandedPensumUser===u.id;
-                  return(<div key={u.id}>
-                    <div className="user-row">
-                      <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <div className="avatar">{initials(u.name)}</div>
-                        <div><div style={{fontSize:14,fontWeight:600}}>{u.name}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"#8890b8"}}>@{u.username}</div></div>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                        <span className={u.role==="admin"?"badge-admin":"badge-emp"}>{u.role==="admin"?"Admin":"Mitarbeiter"}</span>
-                        {u.employment_type==="salaried"&&<button className="btn btn-ghost" style={{padding:"5px 10px",fontSize:12}} onClick={()=>{setExpandedPensumUser(isExpanded?null:u.id);setPensumDraft({valid_from:"",weekly_hours:String(Math.round((u.daily_hours||0)*5*100)/100||""),work_days:u.work_days||"1,2,3,4,5"});}}>⏱ Pensum</button>}
-                        <button className="btn-warn" onClick={()=>setUserModal(u)}>✎</button>
-                        {u.id!==currentUser.id&&<button className="btn-danger" onClick={()=>deleteUser(u.id)}>✕</button>}
-                      </div>
+                {users.map(u=>(
+                  <div key={u.id} className="user-row">
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div className="avatar">{initials(u.name)}</div>
+                      <div><div style={{fontSize:14,fontWeight:600}}>{u.name}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"#8890b8"}}>@{u.username}</div></div>
                     </div>
-                    {isExpanded&&u.employment_type==="salaried"&&(
-                      <div style={{background:"rgba(10,12,19,0.6)",borderRadius:10,padding:"14px 16px",marginBottom:8,border:"1px solid #1e2235"}}>
-                        <div style={{fontSize:12,fontWeight:700,color:"#8890b8",letterSpacing:".07em",textTransform:"uppercase",marginBottom:10}}>Pensum-Verlauf</div>
-                        {uPh.length===0&&<div style={{color:"#8890b8",fontSize:13,marginBottom:10}}>Noch kein Eintrag.</div>}
-                        {uPh.map(h=>(
-                          <div key={h.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,fontSize:13}}>
-                            <span style={{fontFamily:"'DM Mono',monospace",color:"#7c8bff",minWidth:110}}>{h.valid_from==="2000-01-01"?"Startwert":`${MONTHS[parseInt(h.valid_from.substring(5,7))-1]} ${h.valid_from.substring(0,4)}`}</span>
-                            <span>{parseWorkDays(h.work_days).length}T/Wo · {Math.round(h.daily_hours*parseWorkDays(h.work_days).length*100)/100}h/Wo ({h.daily_hours}h/Tag)</span>
-                            {uPh.length>1&&<button className="btn-danger" style={{padding:"2px 8px",fontSize:11}} onClick={async()=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("pensum_history",h.id);setPensumHistory(prev=>prev.filter(x=>x.id!==h.id));}catch(e){alert("Fehler: "+e.message);}}}>✕</button>}
-                          </div>
-                        ))}
-                        <div style={{marginTop:12,display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>
-                          <div className="field-group"><label className="label">Gültig ab</label><div style={{display:"flex",gap:6}}><select className="input" style={{flex:1}} value={pensumDraft.valid_from?pensumDraft.valid_from.substring(5,7):""} onChange={e=>{const y=pensumDraft.valid_from?pensumDraft.valid_from.substring(0,4):String(new Date().getFullYear());setPensumDraft(p=>({...p,valid_from:e.target.value?`${y}-${e.target.value}`:""}))}}>  <option value="">Monat</option>{MONTHS.map((mn,i)=><option key={i} value={String(i+1).padStart(2,"0")}>{mn}</option>)}</select><select className="input" style={{width:80}} value={pensumDraft.valid_from?pensumDraft.valid_from.substring(0,4):""} onChange={e=>{const mo=pensumDraft.valid_from?pensumDraft.valid_from.substring(5,7):"01";setPensumDraft(p=>({...p,valid_from:e.target.value?`${e.target.value}-${mo}`:""}))}}>  <option value="">Jahr</option>{Array.from({length:10},(_,i)=>new Date().getFullYear()-2+i).map(y=><option key={y} value={y}>{y}</option>)}</select></div></div>
-                          <div className="field-group" style={{minWidth:130}}><label className="label">Vollzeit h/Wo (100%)</label><input className="input" type="number" min="0" max="80" step="0.5" value={pensumDraft.weekly_hours} onChange={e=>setPensumDraft(p=>({...p,weekly_hours:e.target.value}))}/></div>
-                          <div className="field-group"><label className="label">Arbeitstage</label><div style={{display:"flex",gap:4}}>{[{v:"1",l:"Mo"},{v:"2",l:"Di"},{v:"3",l:"Mi"},{v:"4",l:"Do"},{v:"5",l:"Fr"}].map(d=>{const active=(pensumDraft.work_days||"").split(",").includes(d.v);return<div key={d.v} className={`day-chip${active?" active":""}`} style={{padding:"4px 8px",fontSize:12,cursor:"pointer",userSelect:"none"}} onClick={()=>{const days=(pensumDraft.work_days||"").split(",").filter(Boolean);const nd=active?days.filter(x=>x!==d.v):[...days,d.v].sort();setPensumDraft(p=>({...p,work_days:nd.join(",")}));}}>{d.l}</div>})}</div>{(()=>{const wh=parseFloat(pensumDraft.weekly_hours);const wd=parseWorkDays(pensumDraft.work_days).length;if(!wh||!wd)return null;const pct=Math.round(wd/5*100);const eff=Math.round(wh*wd/5*10)/10;return<div className="pw-hint">{pct}% → <b>{eff}h/Wo</b> ({Math.round(eff/wd*100)/100}h/Tag)</div>;})()}</div>
-                          <button className="btn btn-primary" style={{padding:"8px 14px",fontSize:13}} onClick={async()=>{if(!pensumDraft.valid_from||!pensumDraft.weekly_hours)return;const wdCount=parseWorkDays(pensumDraft.work_days).length||1;const effWeekly=parseFloat(pensumDraft.weekly_hours)*wdCount/5;const dailyH=Math.round(effWeekly/wdCount*100)/100;try{const vf=pensumDraft.valid_from.length===7?pensumDraft.valid_from+"-01":pensumDraft.valid_from;const r=await sb.insert("pensum_history",{user_id:u.id,valid_from:vf,daily_hours:dailyH,work_days:pensumDraft.work_days||"1,2,3,4,5"});setPensumHistory(prev=>[...prev,r[0]]);setPensumDraft(p=>({...p,valid_from:""}));}catch(e){alert("Fehler: "+e.message);}}}>+ Hinzufügen</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>);
-                })}
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      <span className={u.role==="admin"?"badge-admin":"badge-emp"}>{u.role==="admin"?"Admin":"Mitarbeiter"}</span>
+                      <button className="btn-warn" onClick={()=>setUserModal(u)}>✎</button>
+                      {u.id!==currentUser.id&&<button className="btn-danger" onClick={()=>deleteUser(u.id)}>✕</button>}
+                    </div>
+                  </div>
+                ))}
               </div>
               <div className="card">
                 <div className="section-title">Projekte</div>
