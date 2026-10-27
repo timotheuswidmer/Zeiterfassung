@@ -644,7 +644,7 @@ function LoginScreen({onLogin}){
       if(!me){await supabase.auth.signOut();setErr("Kein Benutzer zu diesem Konto gefunden.");return;}
       onLogin(me);
     }
-    catch(e){setErr("Fehler: "+(e.message||"Verbindungsfehler."));}finally{setLoading(false);}
+    catch(e){await supabase.auth.signOut().catch(()=>{});setErr("Fehler: "+(e.message||"Verbindungsfehler."));}finally{setLoading(false);}
   };
   return(
     <div className="login-wrap"><div className="login-card">

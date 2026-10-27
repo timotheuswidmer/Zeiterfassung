@@ -9,6 +9,8 @@
 -- ─── TEIL 1: Verknüpfung + Funktionen (vor dem Deploy) ──────────────────────
 
 alter table users add column if not exists auth_id uuid unique references auth.users(id) on delete set null;
+-- Klartext-Passwort wird nach der Umstellung gelöscht, neue Benutzer haben keins
+alter table users alter column password drop not null;
 
 -- Eigene users.id / Admin-Prüfung für die eingeloggte Person
 create or replace function app_user_id() returns bigint
