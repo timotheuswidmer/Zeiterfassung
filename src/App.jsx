@@ -966,6 +966,8 @@ export default function App(){
   const [absences,setAbsences]=useState([]);
   const [holidays,setHolidays]=useState([]);
   const [pensumHistory,setPensumHistory]=useState([]);
+  const [legacyPwColumn,setLegacyPwColumn]=useState(false);
+  const [cleanupCopied,setCleanupCopied]=useState(false);
   const [holidayYear,setHolidayYear]=useState(new Date().getFullYear());
   const [hDate,setHDate]=useState("");const [hName,setHName]=useState("");
   const [absenceForm,setAbsenceForm]=useState({dateFrom:todayStr(),dateTo:todayStr(),type:"frei",note:""});
@@ -1176,6 +1178,7 @@ export default function App(){
       let allPh=[...ph];
       const toMigrate=u.filter(usr=>usr.employment_type==="salaried"&&usr.daily_hours&&!ph.some(h=>h.user_id===usr.id));
       if(toMigrate.length>0){const migrated=await Promise.all(toMigrate.map(usr=>sb.insert("pensum_history",{user_id:usr.id,valid_from:"2000-01-01",daily_hours:usr.daily_hours,work_days:usr.work_days||"1,2,3,4,5"}).catch(()=>null)));migrated.forEach(r=>{if(r&&r[0])allPh.push(r[0]);});}
+      setLegacyPwColumn(u.length>0&&"password" in u[0]);
       setUsers(u.map(({password,...rest})=>rest));setEntries(e);setProjects(p.filter(r=>!r.is_archived).map(r=>r.name));setArchivedProjects(p.filter(r=>r.is_archived).map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));setAbsences(abs);setHolidays(hol);setPensumHistory(allPh);
       const budgets=Object.fromEntries(p.map(r=>[r.name,r.budget_hours??null]));setProjectBudgets(budgets);setBudgetDraft(Object.fromEntries(p.map(r=>[r.name,r.budget_hours!=null?String(r.budget_hours):""])));}
     catch(err){console.error("Ladefehler:",err);}finally{setDataReady(true);}
@@ -1566,6 +1569,15 @@ export default function App(){
       </nav>
 
       <div className="main-content" style={{maxWidth:980,margin:"0 auto",padding:"24px 16px"}}>
+        {/* Erinnerung: Auth-Umstellung abschliessen, sobald alle umgestellt sind */}
+        {isAdmin&&legacyPwColumn&&users.length>0&&users.every(u=>u.auth_id)&&(()=>{
+          const sql="drop function legacy_check(text, text);\ndrop function link_auth(text, text);\nalter table users drop column password;";
+          return<div className="msg-success" style={{marginBottom:16,display:"flex",flexDirection:"column",gap:8}}>
+            <div><b>Alle Benutzer sind auf das neue Login umgestellt.</b> Jetzt kann die alte Passwort-Spalte gelöscht werden: Supabase → SQL Editor → folgendes ausführen. Danach verschwindet dieser Hinweis.</div>
+            <pre style={{background:"#0a0c13",border:"1px solid #1a5c38",borderRadius:8,padding:"8px 10px",fontSize:12,fontFamily:"'DM Mono',monospace",whiteSpace:"pre-wrap",color:"#c0f5dc"}}>{sql}</pre>
+            <div><button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>{navigator.clipboard?.writeText(sql).then(()=>setCleanupCopied(true)).catch(()=>{});}}>{cleanupCopied?"✓ Kopiert":"SQL kopieren"}</button></div>
+          </div>;
+        })()}
 
         {/* EINTRAGEN */}
         {view==="eintragen"&&(
