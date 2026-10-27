@@ -1,35 +1,57 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://pjwwzgklzerleftkvnag.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd3d6Z2tsemVybGVmdGt2bmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMTU1MDksImV4cCI6MjA4NzY5MTUwOX0.1WnJd5-JJk4keOUk_VEV-WXiGgyNU1MHEZjxkaLkb54";
 
-const sbHeaders = () => ({
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-  "Content-Type": "application/json",
-});
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Auth-Konten brauchen technisch eine E-Mail; Login läuft weiter über den Benutzernamen
+const newAuthEmail = () => `${crypto.randomUUID()}@example.com`;
+const MIN_PW = 6;
+
+const sbHeaders = async () => {
+  const { data } = await supabase.auth.getSession();
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${data.session?.access_token || SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json",
+  };
+};
 const sb = {
   async select(table, query="") {
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`,{headers:sbHeaders()});
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`,{headers:await sbHeaders()});
     if(!r.ok)throw new Error(await r.text()); return r.json();
   },
   async insert(table,data) {
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}`,{method:"POST",headers:{...sbHeaders(),Prefer:"return=representation"},body:JSON.stringify(data)});
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}`,{method:"POST",headers:{...await sbHeaders(),Prefer:"return=representation"},body:JSON.stringify(data)});
     if(!r.ok)throw new Error(await r.text()); return r.json();
   },
   async update(table,id,data) {
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`,{method:"PATCH",headers:{...sbHeaders(),Prefer:"return=representation"},body:JSON.stringify(data)});
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`,{method:"PATCH",headers:{...await sbHeaders(),Prefer:"return=representation"},body:JSON.stringify(data)});
     if(!r.ok)throw new Error(await r.text()); return r.json();
   },
   async remove(table,id) {
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`,{method:"DELETE",headers:sbHeaders()});
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`,{method:"DELETE",headers:await sbHeaders()});
     if(!r.ok)throw new Error(await r.text());
   },
   async updateWhere(table,filter,data) {
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`,{method:"PATCH",headers:{...sbHeaders(),Prefer:"return=minimal"},body:JSON.stringify(data)});
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`,{method:"PATCH",headers:{...await sbHeaders(),Prefer:"return=minimal"},body:JSON.stringify(data)});
     if(!r.ok)throw new Error(await r.text());
   },
+  async rpc(fn,args={}) {
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:await sbHeaders(),body:JSON.stringify(args)});
+    if(!r.ok)throw new Error(await r.text()); return r.json();
+  },
+};
+// Benutzerzeile zum eingeloggten Auth-Konto
+const loadMe = async () => {
+  const { data } = await supabase.auth.getSession();
+  if(!data.session)return null;
+  const rows=await sb.select("users",`?auth_id=eq.${data.session.user.id}&select=*`);
+  if(!rows.length)return null;
+  const {password,...me}=rows[0];
+  return me;
 };
 
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -246,8 +268,6 @@ const validateTime = (hours,minutes) => {
   if(h*60+m>24*60)return "Ein Eintrag kann höchstens 24 Stunden dauern.";
   return null;
 };
-// Passwort nie im Browser speichern
-const storeSession = u => { try{ const {password,...safe}=u; sessionStorage.setItem("ze_session",JSON.stringify(safe)); }catch{} };
 const fmtYMD = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 const parseWD = wd => (wd||"1,2,3,4,5").split(",").filter(Boolean).map(Number);
 // Nur Feiertage Mo–Fr reduzieren das Soll
@@ -597,11 +617,34 @@ function ConfigScreen(){
 
 function LoginScreen({onLogin}){
   const [username,setUsername]=useState(""); const [password,setPassword]=useState(""); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
+  // Erstanmeldung mit zu kurzem altem Passwort: neues Passwort setzen lassen
+  const [needNewPw,setNeedNewPw]=useState(false); const [newPw,setNewPw]=useState("");
   const attempt=async()=>{
-    if(!username.trim()||!password){setErr("Bitte alle Felder ausfüllen.");return;}
+    const uname=username.trim().toLowerCase();
+    if(!uname||!password){setErr("Bitte alle Felder ausfüllen.");return;}
     setLoading(true);setErr("");
-    try{const users=await sb.select("users",`?username=eq.${encodeURIComponent(username.trim().toLowerCase())}&select=*`);if(!users.length||users[0].password!==password){setErr("Benutzername oder Passwort falsch.");return;}onLogin(users[0]);}
-    catch{setErr("Verbindungsfehler.");}finally{setLoading(false);}
+    try{
+      const email=await sb.rpc("login_email",{p_username:uname});
+      if(email){
+        const {error}=await supabase.auth.signInWithPassword({email,password});
+        if(error){setErr("Benutzername oder Passwort falsch.");return;}
+      }else{
+        // Erste Anmeldung seit der Umstellung: altes Passwort prüfen, sicheres Konto anlegen
+        const ok=await sb.rpc("legacy_check",{p_username:uname,p_password:password});
+        if(!ok){setErr("Benutzername oder Passwort falsch.");return;}
+        const finalPw=password.length>=MIN_PW?password:newPw;
+        if(finalPw.length<MIN_PW){setNeedNewPw(true);setErr(needNewPw?`Neues Passwort muss mindestens ${MIN_PW} Zeichen haben.`:"");return;}
+        const {data,error}=await supabase.auth.signUp({email:newAuthEmail(),password:finalPw});
+        if(error)throw error;
+        if(!data.session)throw new Error("Supabase verlangt eine E-Mail-Bestätigung. Bitte im Dashboard 'Confirm email' deaktivieren.");
+        const linked=await sb.rpc("link_auth",{p_username:uname,p_password:password});
+        if(!linked){await supabase.auth.signOut();setErr("Konto konnte nicht verknüpft werden.");return;}
+      }
+      const me=await loadMe();
+      if(!me){await supabase.auth.signOut();setErr("Kein Benutzer zu diesem Konto gefunden.");return;}
+      onLogin(me);
+    }
+    catch(e){setErr("Fehler: "+(e.message||"Verbindungsfehler."));}finally{setLoading(false);}
   };
   return(
     <div className="login-wrap"><div className="login-card">
@@ -611,8 +654,12 @@ function LoginScreen({onLogin}){
         <div style={{color:"#8890b8",fontSize:13,marginTop:5}}>Melde dich mit deinen Zugangsdaten an</div>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div className="field-group"><label className="label">Benutzername</label><input className="input" value={username} onChange={e=>{setUsername(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="z.B. anna" autoFocus autoCapitalize="none" autoCorrect="off"/></div>
-        <div className="field-group"><label className="label">Passwort</label><input className="input" type="password" value={password} onChange={e=>{setPassword(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="••••••••"/></div>
+        <div className="field-group"><label className="label">Benutzername</label><input className="input" value={username} onChange={e=>{setUsername(e.target.value);setErr("");setNeedNewPw(false);}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="z.B. anna" autoFocus autoCapitalize="none" autoCorrect="off" autoComplete="username"/></div>
+        <div className="field-group"><label className="label">Passwort</label><input className="input" type="password" value={password} onChange={e=>{setPassword(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="••••••••" autoComplete="current-password"/></div>
+        {needNewPw&&<div className="field-group">
+          <div className="msg-success" style={{marginBottom:4}}>Das Login wurde sicherer gemacht. Dein Passwort ist zu kurz – bitte wähle ein neues mit mindestens {MIN_PW} Zeichen.</div>
+          <label className="label">Neues Passwort</label><input className="input" type="password" value={newPw} onChange={e=>{setNewPw(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} autoComplete="new-password"/>
+        </div>}
         {err&&<div className="msg-error">{err}</div>}
         <button className="btn btn-primary btn-full" style={{marginTop:4}} onClick={attempt} disabled={loading}>{loading?"Anmelden…":"Anmelden →"}</button>
       </div>
@@ -648,9 +695,10 @@ function UserModal({existing,onSave,onClose,holidays,pensumHistory=[],onDeletePe
   const save=async()=>{
     if(!form.name.trim()||!form.username.trim()){setErr("Name und Benutzername sind Pflicht.");return;}
     if(!existing&&!form.password.trim()){setErr("Passwort ist Pflicht.");return;}
+    if(form.password.trim()&&form.password.trim().length<MIN_PW){setErr(`Passwort muss mindestens ${MIN_PW} Zeichen haben.`);return;}
     if(isSalaried&&needsStart&&!startPensum){setErr("Bitte Vollzeit-Stunden pro Woche angeben.");return;}
     setSaving(true);
-    try{await onSave({name:form.name.trim(),username:form.username.trim().toLowerCase(),role:form.role,password:form.password.trim()||existing?.password,employment_type:form.employment_type,start_date:isSalaried&&form.start_date?form.start_date:null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25,startPensum,pensumChange:isSalaried&&!needsStart&&pensumChange.valid_from&&pensumChange.weekly_hours?pensumChange:null});}
+    try{await onSave({name:form.name.trim(),username:form.username.trim().toLowerCase(),role:form.role,password:form.password.trim()||null,employment_type:form.employment_type,start_date:isSalaried&&form.start_date?form.start_date:null,vacation_days_per_year:parseInt(form.vacation_days_per_year)||25,startPensum,pensumChange:isSalaried&&!needsStart&&pensumChange.valid_from&&pensumChange.weekly_hours?pensumChange:null});}
     catch(e){setErr("Fehler: "+e.message);}finally{setSaving(false);}
   };
   return(
@@ -876,7 +924,7 @@ function PwModal({onSave,onClose}){
   const save=async()=>{
     if(!oldPw||!newPw||!newPw2){setErr("Alle Felder ausfüllen.");return;}
     if(newPw!==newPw2){setErr("Neues Passwort stimmt nicht überein.");return;}
-    if(newPw.length<4){setErr("Passwort muss mindestens 4 Zeichen lang sein.");return;}
+    if(newPw.length<MIN_PW){setErr(`Passwort muss mindestens ${MIN_PW} Zeichen lang sein.`);return;}
     setSaving(true);setErr("");
     try{await onSave(oldPw,newPw);setOk(true);setTimeout(onClose,1500);}
     catch(e){setErr(e.message);}finally{setSaving(false);}
@@ -903,8 +951,15 @@ function PwModal({onSave,onClose}){
 // ─── Hauptapp ─────────────────────────────────────────────────────────────────
 export default function App(){
   const isConfigured=SUPABASE_URL!=="DEINE_SUPABASE_URL"&&SUPABASE_ANON_KEY!=="DEIN_SUPABASE_ANON_KEY";
-  const [currentUser,setCurrentUser]=useState(()=>{try{const s=sessionStorage.getItem("ze_session");if(!s)return null;const u=JSON.parse(s);if(u.password){storeSession(u);delete u.password;}return u;}catch{return null;}});
-  const [view,setView]=useState(()=>currentUser?.role==="admin"?"auswertung":"eintragen");
+  const [currentUser,setCurrentUser]=useState(null);
+  const [authChecked,setAuthChecked]=useState(false);
+  const [view,setView]=useState("eintragen");
+  // Bestehende Supabase-Sitzung beim Öffnen wiederherstellen
+  useEffect(()=>{
+    loadMe().then(me=>{if(me){setCurrentUser(me);setView(me.role==="admin"?"auswertung":"eintragen");}}).catch(()=>{}).finally(()=>setAuthChecked(true));
+    const {data}=supabase.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT"){setCurrentUser(null);setDataReady(false);}});
+    return()=>data.subscription.unsubscribe();
+  },[]);
   const [users,setUsers]=useState([]); const [entries,setEntries]=useState([]); const [projects,setProjects]=useState([]); const [activities,setActivities]=useState([]); const [products,setProducts]=useState([]);
   const [projectBudgets,setProjectBudgets]=useState({}); // {name: budget_hours|null}
   const [archivedProjects,setArchivedProjects]=useState([]); // nur archivierte Namen
@@ -1121,14 +1176,14 @@ export default function App(){
       let allPh=[...ph];
       const toMigrate=u.filter(usr=>usr.employment_type==="salaried"&&usr.daily_hours&&!ph.some(h=>h.user_id===usr.id));
       if(toMigrate.length>0){const migrated=await Promise.all(toMigrate.map(usr=>sb.insert("pensum_history",{user_id:usr.id,valid_from:"2000-01-01",daily_hours:usr.daily_hours,work_days:usr.work_days||"1,2,3,4,5"}).catch(()=>null)));migrated.forEach(r=>{if(r&&r[0])allPh.push(r[0]);});}
-      setUsers(u);setEntries(e);setProjects(p.filter(r=>!r.is_archived).map(r=>r.name));setArchivedProjects(p.filter(r=>r.is_archived).map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));setAbsences(abs);setHolidays(hol);setPensumHistory(allPh);
+      setUsers(u.map(({password,...rest})=>rest));setEntries(e);setProjects(p.filter(r=>!r.is_archived).map(r=>r.name));setArchivedProjects(p.filter(r=>r.is_archived).map(r=>r.name));setActivities(a.map(r=>r.name));setProducts(pr.map(r=>r.name));setAbsences(abs);setHolidays(hol);setPensumHistory(allPh);
       const budgets=Object.fromEntries(p.map(r=>[r.name,r.budget_hours??null]));setProjectBudgets(budgets);setBudgetDraft(Object.fromEntries(p.map(r=>[r.name,r.budget_hours!=null?String(r.budget_hours):""])));}
     catch(err){console.error("Ladefehler:",err);}finally{setDataReady(true);}
   },[currentUser,isConfigured]);
 
   useEffect(()=>{if(currentUser&&isConfigured)loadData();},[loadData]);
-  const login=(u)=>{const {password,...safe}=u;setCurrentUser(safe);storeSession(u);setView(u.role==="admin"?"auswertung":"eintragen");};
-  const logout=()=>{setCurrentUser(null);setDataReady(false);try{sessionStorage.removeItem("ze_session");}catch{}};
+  const login=(u)=>{setCurrentUser(u);setView(u.role==="admin"?"auswertung":"eintragen");};
+  const logout=async()=>{await supabase.auth.signOut().catch(()=>{});setCurrentUser(null);setDataReady(false);};
 
   const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
     if(isEdit&&entryModal){const savedId=entryModal.id;const updated=await sb.update("entries",savedId,{date,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===savedId?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);if(String(inlineEditId)===String(savedId)){setInlineEditId(null);setInlineForm(emptyForm());}}
@@ -1158,10 +1213,13 @@ export default function App(){
     finally{setInlineSaving(false);}
   };
   const changePassword=async(oldPw,newPw)=>{
-    const rows=await sb.select("users",`?id=eq.${currentUser.id}&select=password`);
-    if(!rows.length||rows[0].password!==oldPw)throw new Error("Aktuelles Passwort ist falsch.");
-    const updated=await sb.update("users",currentUser.id,{password:newPw});
-    const {password,...safe}=updated[0];setCurrentUser(safe);storeSession(updated[0]);
+    const {data}=await supabase.auth.getSession();
+    const email=data.session?.user?.email;
+    if(!email)throw new Error("Nicht angemeldet.");
+    const {error:e1}=await supabase.auth.signInWithPassword({email,password:oldPw});
+    if(e1)throw new Error("Aktuelles Passwort ist falsch.");
+    const {error:e2}=await supabase.auth.updateUser({password:newPw});
+    if(e2)throw new Error(e2.message);
   };
   const deleteEntry=async(id)=>{if(!window.confirm("Eintrag löschen?"))return;try{await sb.remove("entries",id);setEntries(prev=>prev.filter(e=>e.id!==id));}catch(e){alert("Fehler: "+e.message);}};
   const renameProject=async()=>{
@@ -1229,12 +1287,17 @@ export default function App(){
     const base={name:data.name,username:data.username,role:data.role,employment_type:data.employment_type||"hourly",start_date:data.start_date||null,vacation_days_per_year:data.vacation_days_per_year||25,...(data.startPensum?{daily_hours:data.startPensum.daily_hours,work_days:data.startPensum.work_days}:{})};
     let userId;
     if(userModal&&userModal!=="new"){
-      const updated=await sb.update("users",userModal.id,{...base,password:data.password||userModal.password});
+      const updated=await sb.update("users",userModal.id,base);
+      if(data.password)await sb.rpc("admin_set_password",{p_user_id:userModal.id,p_password:data.password});
       setUsers(prev=>prev.map(u=>u.id===userModal.id?updated[0]:u));
-      if(currentUser.id===userModal.id){const {password,...safe}=updated[0];setCurrentUser(safe);storeSession(updated[0]);}
+      if(currentUser.id===userModal.id){const {password,...safe}=updated[0];setCurrentUser(safe);}
       userId=userModal.id;
     }else{
-      const c=await sb.insert("users",{...base,password:data.password});
+      // Auth-Konto über separaten Client anlegen, damit die Admin-Sitzung bestehen bleibt
+      const tmp=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,storageKey:"ze-tmp-signup"}});
+      const {data:su,error:suErr}=await tmp.auth.signUp({email:newAuthEmail(),password:data.password});
+      if(suErr)throw new Error(suErr.message);
+      const c=await sb.insert("users",{...base,auth_id:su.user.id});
       setUsers(prev=>[...prev,c[0]]);
       userId=c[0].id;
     }
@@ -1439,6 +1502,7 @@ export default function App(){
   const navItems=[...(!isAdmin?[{id:"eintragen",icon:"⏱",label:"Eintragen"}]:[]),{id:"auswertung",icon:"📊",label:"Auswertung"},...(isAdmin?[{id:"abschluss",icon:"📋",label:"Abschluss"},{id:"verwaltung",icon:"⚙️",label:"Verwaltung"}]:[])];
 
   if(!isConfigured)return <><style>{CSS}</style><ConfigScreen/></>;
+  if(!authChecked) return <div className="loading"><style>{CSS}</style><div className="spinner"/></div>;
   if(!currentUser) return <><style>{CSS}</style><LoginScreen onLogin={login}/></>;
   if(!dataReady)   return <div className="loading"><style>{CSS}</style><div className="spinner"/><div style={{color:"#8890b8",fontSize:13}}>Daten werden geladen…</div></div>;
 
@@ -1907,6 +1971,7 @@ export default function App(){
                       <div><div style={{fontSize:14,fontWeight:600}}>{u.name}</div><div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"#8890b8"}}>@{u.username}</div></div>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      {!u.auth_id&&<span className="badge-unbezahlt" title="Hat sich seit der Umstellung noch nicht angemeldet">Login noch nicht umgestellt</span>}
                       <span className={u.role==="admin"?"badge-admin":"badge-emp"}>{u.role==="admin"?"Admin":"Mitarbeiter"}</span>
                       <button className="btn-warn" onClick={()=>setUserModal(u)}>✎</button>
                       {u.id!==currentUser.id&&<button className="btn-danger" onClick={()=>deleteUser(u.id)}>✕</button>}
