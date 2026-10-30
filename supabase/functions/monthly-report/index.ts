@@ -16,11 +16,11 @@ Deno.serve(async (req) => {
   if (manual) period = { year: Number(manual[1]), month: Number(manual[2]) - 1 };
   if (!period) return json({ skipped: "nicht letzter Tag des Monats um 23 Uhr" });
 
-  const apiKey = Deno.env.get("RESEND_API_KEY");
+  const apiKey = Deno.env.get("MAILOMAT_API_KEY");
   const to = Deno.env.get("REPORT_TO");
-  const from = Deno.env.get("REPORT_FROM") || "Zeiterfassung <onboarding@resend.dev>";
+  const fromEmail = Deno.env.get("REPORT_FROM");
   const appUrl = Deno.env.get("REPORT_APP_URL")?.replace(/\/+$/, "");
-  if (!apiKey || !to || !appUrl) return json({ error: "RESEND_API_KEY, REPORT_TO oder REPORT_APP_URL fehlt" }, 500);
+  if (!apiKey || !to || !fromEmail || !appUrl) return json({ error: "MAILOMAT_API_KEY, REPORT_TO, REPORT_FROM oder REPORT_APP_URL fehlt" }, 500);
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const key = `${period.year}-${String(period.month + 1).padStart(2, "0")}`;
@@ -64,16 +64,17 @@ Deno.serve(async (req) => {
     // Die Mail enthält bewusst keine Personendaten, nur den Link in den Adminbereich
     const label = `${MONTHS[period.month]} ${period.year}`;
     const link = `${appUrl}/?view=abschluss&period=${folder}`;
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://api.mailomat.swiss/message", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from, to: to.split(",").map((s) => s.trim()),
+        from: { email: fromEmail, name: "Zeiterfassung" },
+        to: to.split(",").map((email) => ({ email: email.trim() })),
         subject: `${isTest ? "[TEST] " : ""}Stundenabschlüsse ${label} sind bereit`,
         text: `Die Stundenabschlüsse ${label} (${files.length} Dateien) sind bereit.\n\nHerunterladen nach dem Admin-Login:\n${link}\n\nEinträge, die nach diesem Zeitpunkt erfasst werden, erscheinen im nächsten Abschluss als Nachtrag.`,
       }),
     });
-    if (!res.ok) return json({ error: `Resend: ${await res.text()}` }, 502);
+    if (!res.ok) return json({ error: `mailomat: ${await res.text()}` }, 502);
 
     if (!isTest) {
       const { error } = await supabase.from("monthly_report_runs").insert({ period: key, cutoff_at: cutoff, recipient: to, files: files.length });
