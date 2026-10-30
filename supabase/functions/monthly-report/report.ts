@@ -299,5 +299,8 @@ export async function reportPdf(r: Report, year: number, month: number, cutoff: 
   return await doc.save();
 }
 
-export const fileName = (name: string, year: number, month: number) =>
-  `${year}_${pad2(month + 1)}_Stundenabschluss_${clean(name).replace(/[^A-Za-z0-9À-ÿ_-]+/g, "_")}.pdf`;
+// Speicherpfade erlauben keine Umlaute
+export const fileName = (name: string, year: number, month: number) => {
+  const ascii = clean(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9_-]+/g, "_");
+  return `${year}_${pad2(month + 1)}_Stundenabschluss_${ascii}.pdf`;
+};

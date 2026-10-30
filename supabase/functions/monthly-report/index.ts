@@ -1,5 +1,4 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
-import { encodeBase64 } from "jsr:@std/encoding@1/base64";
 import { MONTHS, buildReports, fileName, reportPdf, scheduledPeriod } from "./report.ts";
 
 const json = (body: unknown, status = 200) =>
@@ -20,7 +19,8 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   const to = Deno.env.get("REPORT_TO");
   const from = Deno.env.get("REPORT_FROM") || "Zeiterfassung <onboarding@resend.dev>";
-  if (!apiKey || !to) return json({ error: "RESEND_API_KEY oder REPORT_TO fehlt" }, 500);
+  const appUrl = Deno.env.get("REPORT_APP_URL")?.replace(/\/+$/, "");
+  if (!apiKey || !to || !appUrl) return json({ error: "RESEND_API_KEY, REPORT_TO oder REPORT_APP_URL fehlt" }, 500);
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const key = `${period.year}-${String(period.month + 1).padStart(2, "0")}`;
@@ -52,29 +52,34 @@ Deno.serve(async (req) => {
     };
     const cutoff = now.toISOString();
     const reports = buildReports(db, period.year, period.month, cutoff, prevCutoff);
-    const attachments = await Promise.all(reports.map(async (r) => ({
-      filename: fileName(r.name, period!.year, period!.month),
-      content: encodeBase64(await reportPdf(r, period!.year, period!.month, now)),
-    })));
+    const folder = isTest ? `test-${key}` : key;
+    const files: string[] = [];
+    for (const r of reports) {
+      const name = fileName(r.name, period.year, period.month);
+      const { error } = await supabase.storage.from("abschluesse").upload(`${folder}/${name}`, await reportPdf(r, period.year, period.month, now), { contentType: "application/pdf", upsert: true });
+      if (error) throw new Error(`Speichern ${name}: ${error.message}`);
+      files.push(name);
+    }
 
+    // Die Mail enthält bewusst keine Personendaten, nur den Link in den Adminbereich
     const label = `${MONTHS[period.month]} ${period.year}`;
+    const link = `${appUrl}/?view=abschluss&period=${folder}`;
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from, to: to.split(",").map((s) => s.trim()),
-        subject: `${isTest ? "[TEST] " : ""}Stundenabschlüsse ${label}`,
-        text: `Im Anhang die Stundenabschlüsse ${label}:\n\n${reports.map((r) => `- ${r.name}`).join("\n")}\n\nEinträge, die nach diesem Versand erfasst werden, erscheinen im nächsten Abschluss als Nachtrag.`,
-        attachments,
+        subject: `${isTest ? "[TEST] " : ""}Stundenabschlüsse ${label} sind bereit`,
+        text: `Die Stundenabschlüsse ${label} (${files.length} Dateien) sind bereit.\n\nHerunterladen nach dem Admin-Login:\n${link}\n\nEinträge, die nach diesem Zeitpunkt erfasst werden, erscheinen im nächsten Abschluss als Nachtrag.`,
       }),
     });
     if (!res.ok) return json({ error: `Resend: ${await res.text()}` }, 502);
 
     if (!isTest) {
-      const { error } = await supabase.from("monthly_report_runs").insert({ period: key, cutoff_at: cutoff, recipient: to, files: attachments.length });
+      const { error } = await supabase.from("monthly_report_runs").insert({ period: key, cutoff_at: cutoff, recipient: to, files: files.length });
       if (error) return json({ error: `Mail versendet, Protokoll fehlgeschlagen: ${error.message}` }, 500);
     }
-    return json({ sent: key, test: isTest, files: attachments.map((a) => a.filename) });
+    return json({ sent: key, test: isTest, files });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }

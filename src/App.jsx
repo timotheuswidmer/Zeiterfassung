@@ -615,6 +615,55 @@ function ConfigScreen(){
   );
 }
 
+// Link aus der Monatsmail: öffnet nach dem Login das Archiv der Abschlüsse
+const deepLink = new URLSearchParams(window.location.search);
+const deepAbschluss = deepLink.get("view")==="abschluss";
+const deepPeriod = /^(test-)?\d{4}-\d{2}$/.test(deepLink.get("period")||"") ? deepLink.get("period") : null;
+
+function ReportArchive(){
+  const bucket=supabase.storage.from("abschluesse");
+  const [folders,setFolders]=useState(null);
+  const [open,setOpen]=useState(null);
+  const [files,setFiles]=useState([]);
+  const [err,setErr]=useState("");
+  const toggle=async(folder)=>{
+    if(open===folder){setOpen(null);return;}
+    setErr("");setOpen(folder);setFiles([]);
+    const {data,error}=await bucket.list(folder,{limit:200,sortBy:{column:"name",order:"asc"}});
+    if(error)setErr(error.message);else setFiles((data||[]).filter(f=>f.name.endsWith(".pdf")));
+  };
+  useEffect(()=>{
+    bucket.list("",{limit:1000}).then(({data,error})=>{
+      if(error){if(!/not found/i.test(error.message))setErr(error.message);setFolders([]);return;}
+      const names=(data||[]).map(d=>d.name).filter(n=>/^(test-)?\d{4}-\d{2}$/.test(n));
+      setFolders(names.sort((a,b)=>b.replace("test-","").localeCompare(a.replace("test-",""))));
+      if(deepPeriod&&names.includes(deepPeriod))toggle(deepPeriod);
+    });
+  },[]);
+  const download=async(name)=>{
+    setErr("");
+    const {data,error}=await bucket.createSignedUrl(`${open}/${name}`,60,{download:true});
+    if(error)setErr(error.message);else window.location.href=data.signedUrl;
+  };
+  const label=f=>{const k=f.replace("test-","");return `${MONTHS[parseInt(k.slice(5,7))-1]} ${k.slice(0,4)}${f.startsWith("test-")?" (Test)":""}`;};
+  return(
+    <div className="card" style={{marginBottom:16}}>
+      <div className="section-title">Versendete Abschlüsse</div>
+      {folders===null&&<div style={{color:"#8890b8",fontSize:13}}>Wird geladen…</div>}
+      {folders?.length===0&&!err&&<div style={{color:"#8890b8",fontSize:13}}>Noch keine Abschlüsse versendet.</div>}
+      {err&&<div className="msg-error" style={{marginBottom:10}}>{err}</div>}
+      {folders?.map(f=>(
+        <div key={f} style={{marginBottom:6}}>
+          <button className="btn btn-ghost" style={{width:"100%",justifyContent:"space-between",padding:"9px 14px",fontSize:13}} onClick={()=>toggle(f)}><span>{label(f)}</span><span>{open===f?"▾":"▸"}</span></button>
+          {open===f&&<div style={{display:"flex",flexDirection:"column",gap:4,padding:"6px 0 6px 6px"}}>
+            {files.map(x=><button key={x.name} className="btn-excel2" style={{justifyContent:"flex-start",whiteSpace:"normal",textAlign:"left"}} onClick={()=>download(x.name)}>⬇ {x.name}</button>)}
+          </div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LoginScreen({onLogin}){
   const [username,setUsername]=useState(""); const [password,setPassword]=useState(""); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
   // Erstanmeldung mit zu kurzem altem Passwort: neues Passwort setzen lassen
@@ -956,7 +1005,7 @@ export default function App(){
   const [view,setView]=useState("eintragen");
   // Bestehende Supabase-Sitzung beim Öffnen wiederherstellen
   useEffect(()=>{
-    loadMe().then(me=>{if(me){setCurrentUser(me);setView(me.role==="admin"?"auswertung":"eintragen");}}).catch(()=>{}).finally(()=>setAuthChecked(true));
+    loadMe().then(me=>{if(me){setCurrentUser(me);setView(me.role==="admin"?(deepAbschluss?"abschluss":"auswertung"):"eintragen");}}).catch(()=>{}).finally(()=>setAuthChecked(true));
     const {data}=supabase.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT"){setCurrentUser(null);setDataReady(false);}});
     return()=>data.subscription.unsubscribe();
   },[]);
@@ -1185,7 +1234,7 @@ export default function App(){
   },[currentUser,isConfigured]);
 
   useEffect(()=>{if(currentUser&&isConfigured)loadData();},[loadData]);
-  const login=(u)=>{setCurrentUser(u);setView(u.role==="admin"?"auswertung":"eintragen");};
+  const login=(u)=>{setCurrentUser(u);setView(u.role==="admin"?(deepAbschluss?"abschluss":"auswertung"):"eintragen");};
   const logout=async()=>{await supabase.auth.signOut().catch(()=>{});setCurrentUser(null);setDataReady(false);};
 
   const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
@@ -1923,6 +1972,7 @@ export default function App(){
               <button className="btn-excel3" onClick={()=>exportMonatsabschlussExcel({abschlussPerEmp,abschlussMonth,abschlussYear})}>⬇ Stundenblätter (A4)</button>
             </div>
             <p style={{color:"#8890b8",fontSize:13,marginBottom:22}}>Stundenzusammenfassung für die Lohnabrechnung.</p>
+            <ReportArchive/>
             <div className="card" style={{marginBottom:16}}><div style={{display:"flex",gap:10}}>
               <select className="input" style={{width:"auto",flex:1}} value={abschlussMonth} onChange={e=>setAbschlussMonth(+e.target.value)}>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
               <select className="input" style={{width:"auto"}} value={abschlussYear} onChange={e=>setAbschlussYear(+e.target.value)}>{years.map(y=><option key={y}>{y}</option>)}</select>
