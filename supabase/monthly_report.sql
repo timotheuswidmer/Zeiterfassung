@@ -18,6 +18,7 @@ insert into storage.buckets (id, name, public) values ('abschluesse', 'abschlues
 on conflict (id) do update set public = false;
 
 -- Herunterladen nur für Admins; die Function schreibt mit dem Service-Key
+drop policy if exists abschluesse_admin_read on storage.objects;
 create policy abschluesse_admin_read on storage.objects for select to authenticated
   using (bucket_id = 'abschluesse' and is_admin());
 
