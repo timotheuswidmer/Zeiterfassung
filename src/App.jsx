@@ -1076,7 +1076,7 @@ export default function App(){
   const [view,setView]=useState("eintragen");
   // Bestehende Supabase-Sitzung beim Öffnen wiederherstellen
   useEffect(()=>{
-    loadMe().then(me=>{if(me){setCurrentUser(me);setView(me.role==="admin"&&deepAbschluss?"abschluss":"eintragen");}}).catch(()=>{}).finally(()=>setAuthChecked(true));
+    loadMe().then(me=>{if(me){setCurrentUser(me);const deep=me.role==="admin"&&deepAbschluss;setAdminMode(deep);setView(deep?"abschluss":"eintragen");}}).catch(()=>{}).finally(()=>setAuthChecked(true));
     const {data}=supabase.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT"){setCurrentUser(null);setDataReady(false);}});
     return()=>data.subscription.unsubscribe();
   },[]);
@@ -1093,7 +1093,10 @@ export default function App(){
   const [absenceForm,setAbsenceForm]=useState({dateFrom:todayStr(),dateTo:todayStr(),type:"frei",note:""});
   const [absenceSaving,setAbsenceSaving]=useState(false);
   const [dataReady,setDataReady]=useState(false);
-  const isAdmin=currentUser?.role==="admin";
+  // Admins arbeiten normal als Mitarbeiter; die Admin-Ansicht ist ein eigener Bereich
+  const isAdminUser=currentUser?.role==="admin";
+  const [adminMode,setAdminMode]=useState(false);
+  const isAdmin=isAdminUser&&adminMode;
 
   const [entryModal,setEntryModal]=useState(null);
   const FORM_KEY="ze_form_draft";
@@ -1281,6 +1284,7 @@ export default function App(){
     setInlineForm({date:entry.date,project:entry.project,activity:entry.activity,product:entry.product||"",hours:String(Math.floor(entry.total_min/60)),minutes:String(entry.total_min%60),note:entry.note||""});
     setInlineEditId(entry.id);
     setEntryModal(null);
+    setAdminMode(false);
     setView("eintragen");
     await swStartWith(entry.project,entry.activity,entry.note);
   };
@@ -1322,8 +1326,8 @@ export default function App(){
   },[currentUser,isConfigured]);
 
   useEffect(()=>{if(currentUser&&isConfigured)loadData();},[loadData]);
-  const login=(u)=>{setCurrentUser(u);setView(u.role==="admin"&&deepAbschluss?"abschluss":"eintragen");};
-  const logout=async()=>{await supabase.auth.signOut().catch(()=>{});setCurrentUser(null);setDataReady(false);};
+  const login=(u)=>{const deep=u.role==="admin"&&deepAbschluss;setCurrentUser(u);setAdminMode(deep);setView(deep?"abschluss":"eintragen");};
+  const logout=async()=>{setAdminMode(false);await supabase.auth.signOut().catch(()=>{});setCurrentUser(null);setDataReady(false);};
 
   const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
     if(isEdit&&entryModal){const savedId=entryModal.id;const updated=await sb.update("entries",savedId,{date,project,activity,product:product||null,total_min:totalMin,note:note||null});setEntries(prev=>prev.map(e=>e.id===savedId?updated[0]:e));setFormMsg({type:"success",text:"✓ Eintrag aktualisiert!"});setEntryModal(null);if(String(inlineEditId)===String(savedId)){setInlineEditId(null);setInlineForm(emptyForm());}}
@@ -1645,7 +1649,10 @@ export default function App(){
   const maxStat=Math.max(...projectStats.map(s=>s[1]),1);
   const maxAct=Math.max(...activityStats.map(s=>s[1]),1);
 
-  const navItems=[{id:"eintragen",icon:"⏱",label:"Eintragen"},{id:"auswertung",icon:"📊",label:"Auswertung"},...(isAdmin?[{id:"abschluss",icon:"📋",label:"Abschluss"},{id:"verwaltung",icon:"⚙️",label:"Verwaltung"}]:[])];
+  const navItems=adminMode
+    ?[{id:"auswertung",icon:"📊",label:"Auswertung"},{id:"abschluss",icon:"📋",label:"Abschluss"},{id:"verwaltung",icon:"⚙️",label:"Verwaltung"},{id:"__me",icon:"👤",label:"Meine Zeit"}]
+    :[{id:"eintragen",icon:"⏱",label:"Eintragen"},{id:"auswertung",icon:"📊",label:"Auswertung"},...(isAdminUser?[{id:"__admin",icon:"🔑",label:"Admin"}]:[])];
+  const goNav=(id)=>{if(id==="__admin"){setAdminMode(true);setView("auswertung");}else if(id==="__me"){setAdminMode(false);setView("eintragen");}else setView(id);};
 
   if(!isConfigured)return <><style>{CSS}</style><ConfigScreen/></>;
   if(!authChecked) return <div className="loading"><style>{CSS}</style><div className="spinner"/></div>;
@@ -1677,7 +1684,7 @@ export default function App(){
           <span style={{fontWeight:700,fontSize:15}}>Zeiterfassung</span>
         </div>
         <nav className="desktop-nav" style={{display:"flex",gap:2,overflow:"auto"}}>
-          {navItems.map(n=><button key={n.id} className={`nav-btn${view===n.id?" active":""}`} onClick={()=>setView(n.id)}>{n.icon} {n.label}</button>)}
+          {navItems.map(n=><button key={n.id} className={`nav-btn${view===n.id?" active":""}`} onClick={()=>goNav(n.id)}>{n.icon} {n.label}</button>)}
         </nav>
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
           <div className="dropdown-wrap">
@@ -1687,7 +1694,7 @@ export default function App(){
               tabIndex={0}>
               <div className="header-name" style={{textAlign:"right"}}>
                 <div style={{fontSize:13,fontWeight:600}}>{currentUser.name}</div>
-                <span className={isAdmin?"badge-admin":"badge-emp"} style={{fontSize:10}}>{isAdmin?"Admin":"Mitarbeiter"}</span>
+                <span className={isAdmin?"badge-admin":"badge-emp"} style={{fontSize:10}}>{isAdmin?"Admin-Bereich":"Mitarbeiter"}</span>
               </div>
               <div className="avatar" style={{width:32,height:32,fontSize:12}}>{initials(currentUser.name)}</div>
               <span style={{color:"#8890b8",fontSize:11}}>▾</span>
@@ -1707,7 +1714,7 @@ export default function App(){
         </div>
       </header>
       <nav className="mobile-nav">
-        {navItems.map(n=><button key={n.id} className={`mobile-nav-btn${view===n.id?" active":""}`} onClick={()=>setView(n.id)}><span className="icon">{n.icon}</span>{n.label}</button>)}
+        {navItems.map(n=><button key={n.id} className={`mobile-nav-btn${view===n.id?" active":""}`} onClick={()=>goNav(n.id)}><span className="icon">{n.icon}</span>{n.label}</button>)}
         <button className="mobile-nav-btn" onClick={logout}><span className="icon">🚪</span>Logout</button>
       </nav>
 
