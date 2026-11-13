@@ -1150,6 +1150,23 @@ export default function App(){
     return()=>clearInterval(swRef.current);
   },[swRunning]);
 
+  // App bleibt auf dem Handy oft über Nacht offen: beim Zurückkehren an einem neuen Tag auf heute springen,
+  // ausser es wird ein bestehender Eintrag fortgeführt oder bewusst ein anderes Datum gewählt
+  const lastDayRef=useRef(todayStr());
+  useEffect(()=>{
+    const onResume=()=>{
+      if(document.visibilityState!=="visible")return;
+      const today=todayStr(),prev=lastDayRef.current;
+      if(today===prev)return;
+      lastDayRef.current=today;
+      if(!inlineEditId)setInlineForm(f=>f.date===prev?{...f,date:today}:f);
+      setSelectedDate(d=>d===prev?today:d);
+    };
+    document.addEventListener("visibilitychange",onResume);
+    window.addEventListener("focus",onResume);
+    return()=>{document.removeEventListener("visibilitychange",onResume);window.removeEventListener("focus",onResume);};
+  },[inlineEditId]);
+
   // Tab wird wieder sichtbar → Zeit aus Supabase neu berechnen
   useEffect(()=>{
     const onVisible=async()=>{
@@ -1574,6 +1591,11 @@ export default function App(){
   },[users,entries,absences,calcSollIst,getPensumForMonth]);
 
   const myEntries=useMemo(()=>entries.filter(e=>e.employee_id===currentUser?.id),[entries,currentUser]);
+  // Verweis auf einen fortgeführten Eintrag, den es nicht mehr gibt, verwerfen
+  useEffect(()=>{
+    if(!dataReady||!inlineEditId)return;
+    if(!myEntries.some(e=>String(e.id)===String(inlineEditId))){setInlineEditId(null);setInlineForm(f=>({...f,date:todayStr()}));}
+  },[dataReady,inlineEditId,myEntries]);
   // Jahre mit Daten von Festangestellten, für die keine Feiertage geladen sind
   const missingHolidayYears=useMemo(()=>{
     const salariedIds=new Set(users.filter(u=>u.employment_type==="salaried").map(u=>u.id));
@@ -1710,6 +1732,13 @@ export default function App(){
             {/* Inline-Erfassungsformular */}
             <div className="card" style={{marginBottom:16}}>
               <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                {inlineEditId&&(()=>{
+                  const orig=myEntries.find(e=>String(e.id)===String(inlineEditId));
+                  return<div className="msg-success" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",background:"rgba(255,190,50,0.08)",borderColor:"rgba(255,190,50,0.35)",color:"#ffbe32"}}>
+                    <span>Du führst den Eintrag {orig?<>vom <b>{fmtDMY(orig.date)}</b> ({orig.project})</>:"von früher"} fort. Speichern überschreibt diesen Eintrag.</span>
+                    <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>{setInlineEditId(null);setInlineForm(emptyForm());}}>Stattdessen neuer Eintrag</button>
+                  </div>;
+                })()}
                 {/* Zeile 1: Datum + Tagestotal */}
                 <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                   <div className="field-group" style={{flex:"1 1 160px",maxWidth:220}}>
