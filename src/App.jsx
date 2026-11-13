@@ -39,6 +39,15 @@ const sb = {
     const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`,{method:"PATCH",headers:{...await sbHeaders(),Prefer:"return=minimal"},body:JSON.stringify(data)});
     if(!r.ok)throw new Error(await r.text());
   },
+  // Supabase liefert pro Abfrage höchstens 1000 Zeilen – darum seitenweise laden
+  async selectAll(table,query) {
+    const rows=[];
+    for(let offset=0;;){
+      const page=await sb.select(table,`${query}&limit=1000&offset=${offset}`);
+      if(!page.length)return rows;
+      rows.push(...page);offset+=page.length;
+    }
+  },
   async rpc(fn,args={}) {
     const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:await sbHeaders(),body:JSON.stringify(args)});
     if(!r.ok)throw new Error(await r.text()); return r.json();
@@ -1222,7 +1231,7 @@ export default function App(){
 
   const loadData=useCallback(async()=>{
     if(!isConfigured||!currentUser)return;
-    try{const [u,e,p,a,pr,abs,hol,ph]=await Promise.all([sb.select("users","?select=*&order=name"),sb.select("entries","?select=*&order=date.desc,id.desc"),sb.select("projects","?select=*&order=name"),sb.select("activities","?select=*&order=name"),sb.select("products","?select=*&order=name"),sb.select("absences","?select=*&order=date.desc"),sb.select("holidays","?select=*&order=date.asc"),sb.select("pensum_history","?select=*&order=user_id,valid_from.asc").catch(()=>[])]);
+    try{const [u,e,p,a,pr,abs,hol,ph]=await Promise.all([sb.selectAll("users","?select=*&order=name"),sb.selectAll("entries","?select=*&order=date.desc,id.desc"),sb.selectAll("projects","?select=*&order=name"),sb.selectAll("activities","?select=*&order=name"),sb.selectAll("products","?select=*&order=name"),sb.selectAll("absences","?select=*&order=date.desc"),sb.selectAll("holidays","?select=*&order=date.asc"),sb.selectAll("pensum_history","?select=*&order=user_id,valid_from.asc").catch(()=>[])]);
       // Migration: salaried users ohne pensum_history-Eintrag bekommen einen Starteintrag
       let allPh=[...ph];
       const toMigrate=u.filter(usr=>usr.employment_type==="salaried"&&usr.daily_hours&&!ph.some(h=>h.user_id===usr.id));
