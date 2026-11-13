@@ -6,6 +6,7 @@ export type Db = {
   absences: any[];
   holidays: any[];
   pensum: any[];
+  audit?: any[];
 };
 
 export const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -18,8 +19,8 @@ const isWeekdayHoliday = (h: any) => {
   return dowOf(y, m - 1, d) <= 5;
 };
 export const fmtTime = (min: number) => {
-  const m = Math.round(min);
-  return `${Math.floor(m / 60)}h ${pad2(m % 60)}m`;
+  const m = Math.round(Math.abs(min));
+  return `${min < 0 ? "-" : ""}${Math.floor(m / 60)}h ${pad2(m % 60)}m`;
 };
 const signed = (min: number) => `${min >= 0 ? "+" : "-"}${fmtTime(Math.abs(min))}`;
 const capturedBy = (e: any, cutoff: string) => Date.parse(e.created_at) <= Date.parse(cutoff);
@@ -126,6 +127,47 @@ function vacation(db: Db, user: any, year: number) {
   return { carryOver, entitlement, used, remaining: carryOver + entitlement - used };
 }
 
+// Änderungen seit dem letzten Abschluss an Daten aus bereits abgeschlossenen Monaten.
+// Korrektur = heutiger Wert in Vormonaten minus Wert beim letzten Abschluss (nur Einträge).
+function closedMonthChanges(db: Db, user: any, monthStart: string, prevCutoff: string) {
+  const events = (db.audit || [])
+    .filter((a) => a.owner_id === user.id && !capturedBy({ created_at: a.changed_at }, prevCutoff))
+    .sort((a, b) => Date.parse(a.changed_at) - Date.parse(b.changed_at));
+  const items: { date: string; text: string; by: string; at: string }[] = [];
+  let correctionMin = 0;
+  const byRow = new Map<string, any[]>();
+  for (const e of events) {
+    const k = `${e.table_name}:${e.row_id}`;
+    byRow.set(k, [...(byRow.get(k) || []), e]);
+  }
+  const entryText = (d: any) => `${d.project} / ${d.activity} ${fmtTime(d.total_min)}`;
+  const absText = (d: any) => ({ frei: "Ferien", krank: "Krank", unbezahlt: "Unbezahlt" } as any)[d.type] || d.type;
+  for (const list of byRow.values()) {
+    const first = list[0], last = list[list.length - 1];
+    if (first.table_name === "entries") {
+      const before = first.old_data;
+      // Neu erfasste Einträge sind Nachträge und stehen schon in der eigenen Tabelle
+      if (!before || !capturedBy(before, prevCutoff) || before.date >= monthStart) continue;
+      const after = last.action === "DELETE" ? null : last.new_data;
+      correctionMin += (after && after.date < monthStart ? after.total_min : 0) - before.total_min;
+      items.push({
+        date: before.date, by: last.changed_by_name, at: last.changed_at,
+        text: after ? `Eintrag geändert: ${entryText(before)} -> ${fmtDate(after.date)} ${entryText(after)}` : `Eintrag gelöscht: ${entryText(before)}`,
+      });
+    } else if (first.table_name === "absences") {
+      const before = first.old_data, after = last.action === "DELETE" ? null : last.new_data;
+      const date = (before || after).date;
+      if (date >= monthStart && (!after || after.date >= monthStart)) continue;
+      const text = !before ? `Abwesenheit nachgetragen: ${absText(after)}`
+        : !after ? `Abwesenheit gelöscht: ${absText(before)}`
+        : `Abwesenheit geändert: ${absText(before)} -> ${fmtDate(after.date)} ${absText(after)}`;
+      items.push({ date, text, by: last.changed_by_name, at: last.changed_at });
+    }
+  }
+  items.sort((a, b) => a.date.localeCompare(b.date));
+  return { items, correctionMin };
+}
+
 export type Report = ReturnType<typeof buildReports>[number];
 
 // cutoff: Stichtag dieses Versands; prevCutoff: Stichtag des letzten Versands (für Nachträge)
@@ -141,6 +183,7 @@ export function buildReports(db: Db, year: number, month: number, cutoff: string
     const entryMin = entries.reduce((s, e) => s + e.total_min, 0);
     const lateMin = late.reduce((s, e) => s + e.total_min, 0);
     const si = sollIst(db, user, month, year, cutoff);
+    const changes = prevCutoff ? closedMonthChanges(db, user, monthStart, prevCutoff) : { items: [], correctionMin: 0 };
     const absences = db.absences
       .filter((a) => a.user_id === user.id && a.date.startsWith(key))
       .sort((a, b) => a.date.localeCompare(b.date));
@@ -148,15 +191,16 @@ export function buildReports(db: Db, year: number, month: number, cutoff: string
       user, name: user.name as string, entries, late, entryMin, lateMin, totalMin: entryMin + lateMin,
       // Nachträge zählen in diesem Abschluss; sie gehören beim Saldo zu ihrem Datum und sind dort schon enthalten
       soll: si ? si.sollMin : null,
-      ist: si ? si.istMin + lateMin : null,
-      diff: si ? si.diff + lateMin : null,
+      ist: si ? si.istMin + lateMin + changes.correctionMin : null,
+      diff: si ? si.diff + lateMin + changes.correctionMin : null,
+      changes,
       saldo: si ? cumulativeSaldo(db, user, month, year, cutoff) : null,
       absences,
       vacation: si ? vacation(db, user, year) : null,
     };
   });
   return reports
-    .filter((r) => r.entries.length || r.late.length || r.soll !== null)
+    .filter((r) => r.entries.length || r.late.length || r.changes.items.length || r.soll !== null)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -260,6 +304,24 @@ export async function reportPdf(r: Report, year: number, month: number, cutoff: 
 
   table("Einträge", r.entries, r.entryMin);
   if (r.late.length) table("Nachträge aus Vormonaten (nach dem letzten Abschluss erfasst)", r.late, r.lateMin);
+
+  if (r.changes.items.length) {
+    ensure(40);
+    text("Änderungen an bereits abgeschlossenen Monaten", M, 11, bold, NAVY); y -= 15;
+    for (const c of r.changes.items) {
+      const z = zurichParts(new Date(c.at));
+      const lines = wrap(`${fmtDate(c.date)}: ${c.text} (von ${c.by} am ${pad2(z.day)}.${pad2(z.month + 1)}.)`, font, 9, W - 2 * M);
+      for (const l of lines) { ensure(12); text(l, M, 9); y -= 12; }
+    }
+    if (r.changes.correctionMin) {
+      ensure(14);
+      text(`Korrektur im Ist dieses Abschlusses: ${signed(r.changes.correctionMin)}`, M, 9, bold);
+      y -= 12;
+    }
+    ensure(12);
+    text("Geänderte Abwesenheiten wirken sich auf den kumulierten Saldo aus, nicht auf +/- Monat.", M, 8, font, GREY);
+    y -= 20;
+  }
 
   const labels: Record<string, string> = { frei: "Ferien", krank: "Krank", unbezahlt: "Unbezahlt" };
   if (r.absences.length || r.vacation) {

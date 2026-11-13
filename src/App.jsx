@@ -624,6 +624,68 @@ function ConfigScreen(){
   );
 }
 
+const FIELD_LABELS={date:"Datum",project:"Projekt",activity:"Tätigkeit",product:"Produkt",total_min:"Zeit",note:"Bemerkung",type:"Typ"};
+const ABS_TYPES={frei:"Ferien",krank:"Krank",unbezahlt:"Unbezahlt"};
+const ACTIONS={INSERT:["Erfasst","badge-frei"],UPDATE:["Geändert","badge-unbezahlt"],DELETE:["Gelöscht","badge-krank"]};
+const fmtDMY=d=>d?`${d.slice(8,10)}.${d.slice(5,7)}.${d.slice(0,4)}`:"–";
+const fmtField=(k,v)=>v==null||v===""?"–":k==="total_min"?fmtTime(v):k==="type"?(ABS_TYPES[v]||v):k==="date"?fmtDMY(v):String(v);
+
+function AuditLog({users}){
+  const PAGE=100;
+  const [rows,setRows]=useState(null);
+  const [owner,setOwner]=useState("alle");
+  const [onlyChanges,setOnlyChanges]=useState(true);
+  const [more,setMore]=useState(false);
+  const [err,setErr]=useState("");
+  const load=async(offset=0)=>{
+    setErr("");
+    let q=`?select=*&order=changed_at.desc&limit=${PAGE}&offset=${offset}`;
+    if(owner!=="alle")q+=`&owner_id=eq.${owner}`;
+    if(onlyChanges)q+="&action=in.(UPDATE,DELETE)";
+    try{const r=await sb.select("audit_log",q);setRows(prev=>offset?[...prev,...r]:r);setMore(r.length===PAGE);}
+    catch(e){setRows([]);setMore(false);setErr(/audit_log/.test(e.message)?"Das Protokoll ist noch nicht eingerichtet: supabase/audit_log.sql im SQL Editor ausführen.":e.message);}
+  };
+  useEffect(()=>{load(0);},[owner,onlyChanges]);
+  const nameOf=id=>users.find(u=>u.id===id)?.name||"?";
+  const summary=(r,x)=>r.table_name==="entries"?`${fmtDMY(x.date)} · ${x.project} / ${x.activity} · ${fmtTime(x.total_min)}`:`${fmtDMY(x.date)} · ${ABS_TYPES[x.type]||x.type}`;
+  const describe=r=>{
+    if(r.action!=="UPDATE")return summary(r,r.new_data||r.old_data);
+    const changes=Object.keys(FIELD_LABELS).filter(k=>k in r.old_data&&JSON.stringify(r.old_data[k])!==JSON.stringify(r.new_data[k]))
+      .map(k=>`${FIELD_LABELS[k]}: ${fmtField(k,r.old_data[k])} → ${fmtField(k,r.new_data[k])}`);
+    return <>{summary(r,r.old_data)}<div style={{color:"#ffbe32",marginTop:2}}>{changes.join(" · ")||"Keine sichtbare Änderung"}</div></>;
+  };
+  return(
+    <div className="card">
+      <div className="section-title">Änderungsprotokoll</div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:12,alignItems:"center"}}>
+        <select className="input" style={{width:"auto",flex:"1 1 160px"}} value={owner} onChange={e=>setOwner(e.target.value)}>
+          <option value="alle">Alle Personen</option>{users.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
+        <label style={{display:"flex",gap:6,alignItems:"center",fontSize:13,color:"#9aa2c8",cursor:"pointer"}}>
+          <input type="checkbox" checked={onlyChanges} onChange={e=>setOnlyChanges(e.target.checked)} style={{accentColor:"#4f5de8",width:16,height:16}}/>Nur Änderungen und Löschungen
+        </label>
+      </div>
+      {err&&<div className="msg-error">{err}</div>}
+      {rows===null&&!err&&<div style={{color:"#8890b8",fontSize:13}}>Wird geladen…</div>}
+      {rows?.length===0&&!err&&<div style={{color:"#8890b8",fontSize:13}}>Keine Einträge im Protokoll.</div>}
+      {rows?.map(r=>{
+        const [label,badge]=ACTIONS[r.action]||[r.action,"badge-emp"];
+        return(
+          <div key={r.id} className="mgmt-list-item" style={{flexDirection:"column",alignItems:"stretch",gap:4}}>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#8890b8"}}>
+              <span className={badge}>{label}</span>
+              <span>{r.table_name==="entries"?"Eintrag":"Abwesenheit"} · <b style={{color:"#e0e4f8"}}>{nameOf(r.owner_id)}</b></span>
+              <span style={{marginLeft:"auto"}}>{new Date(r.changed_at).toLocaleString("de-CH",{dateStyle:"short",timeStyle:"short"})} durch {r.changed_by_name||"System"}</span>
+            </div>
+            <div style={{fontSize:13}}>{describe(r)}</div>
+          </div>
+        );
+      })}
+      {more&&<button className="btn btn-ghost" style={{marginTop:8}} onClick={()=>load(rows.length)}>Mehr laden</button>}
+    </div>
+  );
+}
+
 // Link aus der Monatsmail: öffnet nach dem Login das Archiv der Abschlüsse
 const deepLink = new URLSearchParams(window.location.search);
 const deepAbschluss = deepLink.get("view")==="abschluss";
@@ -2132,6 +2194,8 @@ export default function App(){
                 </div>
                 <div style={{display:"flex",gap:8}}><input className="input" placeholder="Neues Produkt…" value={newProduct} onChange={e=>setNewProduct(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addProduct()}/><button className="btn btn-primary" style={{flexShrink:0}} onClick={addProduct}>+</button></div>
               </div>
+
+              <AuditLog users={users}/>
 
               {/* Feiertage */}
               <div className="card">

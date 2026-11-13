@@ -49,6 +49,8 @@ Deno.serve(async (req) => {
       absences: await fetchAll("absences", "id,user_id,date,type"),
       holidays: await fetchAll("holidays", "id,date"),
       pensum: await fetchAll("pensum_history", "id,user_id,valid_from,daily_hours,work_days"),
+      // Fehlt das Protokoll noch, gibt es einfach keine Änderungsliste
+      audit: prevCutoff ? await fetchAll("audit_log", "id,table_name,row_id,action,owner_id,changed_by_name,changed_at,old_data,new_data").catch(() => []) : [],
     };
     const cutoff = now.toISOString();
     const reports = buildReports(db, period.year, period.month, cutoff, prevCutoff);
