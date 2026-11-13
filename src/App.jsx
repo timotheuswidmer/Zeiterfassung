@@ -1076,7 +1076,7 @@ export default function App(){
   const [view,setView]=useState("eintragen");
   // Bestehende Supabase-Sitzung beim Öffnen wiederherstellen
   useEffect(()=>{
-    loadMe().then(me=>{if(me){setCurrentUser(me);setView(me.role==="admin"?(deepAbschluss?"abschluss":"auswertung"):"eintragen");}}).catch(()=>{}).finally(()=>setAuthChecked(true));
+    loadMe().then(me=>{if(me){setCurrentUser(me);setView(me.role==="admin"&&deepAbschluss?"abschluss":"eintragen");}}).catch(()=>{}).finally(()=>setAuthChecked(true));
     const {data}=supabase.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT"){setCurrentUser(null);setDataReady(false);}});
     return()=>data.subscription.unsubscribe();
   },[]);
@@ -1322,7 +1322,7 @@ export default function App(){
   },[currentUser,isConfigured]);
 
   useEffect(()=>{if(currentUser&&isConfigured)loadData();},[loadData]);
-  const login=(u)=>{setCurrentUser(u);setView(u.role==="admin"?(deepAbschluss?"abschluss":"auswertung"):"eintragen");};
+  const login=(u)=>{setCurrentUser(u);setView(u.role==="admin"&&deepAbschluss?"abschluss":"eintragen");};
   const logout=async()=>{await supabase.auth.signOut().catch(()=>{});setCurrentUser(null);setDataReady(false);};
 
   const saveEntry=async({date,project,activity,product,totalMin,note},isEdit=false)=>{
@@ -1424,6 +1424,7 @@ export default function App(){
   const addProduct=async()=>{if(!newProduct.trim())return;try{await sb.insert("products",{name:newProduct.trim()});setProducts(prev=>[...prev,newProduct.trim()].sort());setNewProduct("");}catch(e){alert("Fehler: "+e.message);}};
   const removeProduct=async(name)=>{if(!window.confirm(`Produkt "${name}" entfernen?`))return;try{const r=await sb.select("products",`?name=eq.${encodeURIComponent(name)}`);if(r[0])await sb.remove("products",r[0].id);setProducts(prev=>prev.filter(p=>p!==name));}catch(e){alert("Fehler: "+e.message);}};
   const saveUser=async(data)=>{
+    if(userModal&&userModal!=="new"&&userModal.id===currentUser.id&&data.role!=="admin")throw new Error("Du kannst dir die Admin-Rolle nicht selbst entziehen – das muss ein anderer Admin machen.");
     const base={name:data.name,username:data.username,role:data.role,employment_type:data.employment_type||"hourly",start_date:data.start_date||null,vacation_days_per_year:data.vacation_days_per_year||25,...(data.startPensum?{daily_hours:data.startPensum.daily_hours,work_days:data.startPensum.work_days}:{})};
     let userId;
     if(userModal&&userModal!=="new"){
@@ -1644,7 +1645,7 @@ export default function App(){
   const maxStat=Math.max(...projectStats.map(s=>s[1]),1);
   const maxAct=Math.max(...activityStats.map(s=>s[1]),1);
 
-  const navItems=[...(!isAdmin?[{id:"eintragen",icon:"⏱",label:"Eintragen"}]:[]),{id:"auswertung",icon:"📊",label:"Auswertung"},...(isAdmin?[{id:"abschluss",icon:"📋",label:"Abschluss"},{id:"verwaltung",icon:"⚙️",label:"Verwaltung"}]:[])];
+  const navItems=[{id:"eintragen",icon:"⏱",label:"Eintragen"},{id:"auswertung",icon:"📊",label:"Auswertung"},...(isAdmin?[{id:"abschluss",icon:"📋",label:"Abschluss"},{id:"verwaltung",icon:"⚙️",label:"Verwaltung"}]:[])];
 
   if(!isConfigured)return <><style>{CSS}</style><ConfigScreen/></>;
   if(!authChecked) return <div className="loading"><style>{CSS}</style><div className="spinner"/></div>;
